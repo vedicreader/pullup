@@ -14,8 +14,48 @@ def example_infrastructure():
     Example Pulumi program that defines infrastructure.
     
     In a real scenario, this would create actual cloud resources.
-    For this example, we just export some outputs.
+    For this example, we export some outputs.
+    
+    Example of real infrastructure code (commented out):
+    
+    # AWS S3 Bucket with security defaults:
+    # import pulumi_aws as aws
+    # bucket = aws.s3.Bucket("my-bucket",
+    #     server_side_encryption_configuration={
+    #         "rule": {
+    #             "apply_server_side_encryption_by_default": {
+    #                 "sse_algorithm": "AES256",
+    #             },
+    #         },
+    #     },
+    #     versioning={"enabled": True},
+    #     tags=create_secure_tags("prod", "platform-team")
+    # )
+    # pulumi.export("bucket_name", bucket.id)
+    
+    # Azure Storage Account with security:
+    # import pulumi_azure as azure
+    # storage = azure.storage.Account("storage",
+    #     resource_group_name="my-rg",
+    #     account_tier="Standard",
+    #     account_replication_type="GRS",
+    #     enable_https_traffic_only=True,
+    #     min_tls_version="TLS1_2",
+    #     tags=create_secure_tags("prod", "platform-team")
+    # )
+    # pulumi.export("storage_name", storage.name)
+    
+    # GCP Cloud Storage Bucket:
+    # import pulumi_gcp as gcp
+    # bucket = gcp.storage.Bucket("my-bucket",
+    #     location="US",
+    #     uniform_bucket_level_access=True,
+    #     versioning={"enabled": True},
+    #     labels=create_secure_tags("prod", "platform-team")
+    # )
+    # pulumi.export("bucket_url", bucket.url)
     """
+    
     # Export some example outputs
     pulumi.export("message", "Infrastructure created successfully!")
     pulumi.export("environment", "development")

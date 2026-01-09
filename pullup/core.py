@@ -19,7 +19,7 @@ class PulumiStack:
                  project_name: str = "pullup-project",
                  work_dir: Optional[str] = None,
                  backend_url: Optional[str] = None,
-                 passphrase: str = "pullup-default-passphrase"):
+                 passphrase: Optional[str] = None):
         """
         Initialize a Pulumi stack with automatic configuration.
         
@@ -28,13 +28,14 @@ class PulumiStack:
             project_name: Name of the Pulumi project
             work_dir: Working directory for Pulumi files (defaults to current directory)
             backend_url: Pulumi backend URL (defaults to local file backend)
-            passphrase: Passphrase for secrets encryption (defaults to 'pullup-default-passphrase')
+            passphrase: Passphrase for secrets encryption (reads from PULUMI_CONFIG_PASSPHRASE env var if not provided)
         """
         self.stack_name = stack_name
         self.project_name = project_name
         self.work_dir = work_dir or os.getcwd()
         self.backend_url = backend_url or f"file://{os.path.join(self.work_dir, '.pulumi')}"
-        self.passphrase = passphrase
+        # Use provided passphrase, or environment variable, or generate a default
+        self.passphrase = passphrase or os.environ.get('PULUMI_CONFIG_PASSPHRASE', 'pullup-default-passphrase')
         self.stack = None
         self._program = None
         
@@ -117,7 +118,8 @@ def quick_stack(stack_name: str,
                 program: Callable[[], None],
                 project_name: str = "pullup-project",
                 config: Optional[Dict[str, Any]] = None,
-                auto_deploy: bool = False) -> PulumiStack:
+                auto_deploy: bool = False,
+                secret_keywords: Optional[list] = None) -> PulumiStack:
     """
     Quickly create and configure a Pulumi stack with sensible defaults.
     
@@ -127,17 +129,28 @@ def quick_stack(stack_name: str,
         project_name: Name of the project
         config: Configuration dictionary
         auto_deploy: If True, automatically deploy the stack
+        secret_keywords: List of keywords to identify secret config keys (defaults to common secret patterns)
     
     Returns:
         Configured PulumiStack instance
     """
+    # Default secret keywords if not provided
+    if secret_keywords is None:
+        secret_keywords = [
+            'password', 'passwd', 'pwd',
+            'token', 'secret', 'apikey', 'api_key',
+            'key', 'credential', 'auth',
+            'private', 'access_key', 'secret_key'
+        ]
+    
     stack = PulumiStack(stack_name, project_name)
     stack.login().setup(program).create_or_select()
     
     if config:
         for key, value in config.items():
-            # Detect if value should be secret (e.g., contains 'password', 'token', 'key')
-            is_secret = any(s in key.lower() for s in ['password', 'token', 'secret', 'key', 'credential'])
+            # Detect if value should be secret based on key name
+            key_lower = key.lower().replace('-', '_')
+            is_secret = any(keyword in key_lower for keyword in secret_keywords)
             stack.set_config(key, str(value), secret=is_secret)
     
     if auto_deploy:

@@ -18,7 +18,8 @@ class PulumiStack:
                  stack_name: str,
                  project_name: str = "pullup-project",
                  work_dir: Optional[str] = None,
-                 backend_url: Optional[str] = None):
+                 backend_url: Optional[str] = None,
+                 passphrase: str = "pullup-default-passphrase"):
         """
         Initialize a Pulumi stack with automatic configuration.
         
@@ -27,11 +28,13 @@ class PulumiStack:
             project_name: Name of the Pulumi project
             work_dir: Working directory for Pulumi files (defaults to current directory)
             backend_url: Pulumi backend URL (defaults to local file backend)
+            passphrase: Passphrase for secrets encryption (defaults to 'pullup-default-passphrase')
         """
         self.stack_name = stack_name
         self.project_name = project_name
         self.work_dir = work_dir or os.getcwd()
         self.backend_url = backend_url or f"file://{os.path.join(self.work_dir, '.pulumi')}"
+        self.passphrase = passphrase
         self.stack = None
         self._program = None
         
@@ -42,7 +45,14 @@ class PulumiStack:
     
     def login(self):
         """Login to Pulumi backend (no CLI interaction required)."""
+        # Create backend directory if it doesn't exist (for file backend)
+        if self.backend_url.startswith('file://'):
+            backend_path = self.backend_url.replace('file://', '').split('?')[0]
+            Path(backend_path).mkdir(parents=True, exist_ok=True)
+        
+        # Set environment variables for Pulumi
         os.environ["PULUMI_BACKEND_URL"] = self.backend_url
+        os.environ["PULUMI_CONFIG_PASSPHRASE"] = self.passphrase
         return self
     
     def create_or_select(self):
@@ -57,7 +67,10 @@ class PulumiStack:
             program=self._program,
             opts=auto.LocalWorkspaceOptions(
                 work_dir=self.work_dir,
-                env_vars={"PULUMI_BACKEND_URL": self.backend_url}
+                env_vars={
+                    "PULUMI_BACKEND_URL": self.backend_url,
+                    "PULUMI_CONFIG_PASSPHRASE": self.passphrase
+                }
             )
         )
         return self

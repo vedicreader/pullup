@@ -154,3 +154,5 @@ checklink/cookies.txt
 # Pulumi
 .pulumi/
 *.pulumi/
+Pulumi.yaml
+Pulumi.*.yaml

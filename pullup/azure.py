@@ -26,7 +26,7 @@ def storage(name:str=None, # Storage account name
         rg = azure.resources.ResourceGroup(rg_name, location=location)
         resource_group = rg.name
     
-    account_name = name or f"pullup{pulumi.get_stack()}".replace("-", "")[:24]
+    account_name = name or f"pullup{pulumi.get_stack()}".replace("-", "").lower()[:24]
     
     # Create storage account
     account = azure.storage.StorageAccount(account_name,

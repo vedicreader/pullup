@@ -27,8 +27,6 @@ def storage(name:str=None, # Bucket name
         uniform_bucket_level_access=True,
         versioning=gcp.storage.BucketVersioningArgs(
             enabled=versioning) if versioning else None,
-        encryption=gcp.storage.BucketEncryptionArgs(
-            default_kms_key_name=None) if encryption else None,
         public_access_prevention="enforced" if not public else "inherited",
         **kwargs)
     

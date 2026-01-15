@@ -245,7 +245,7 @@ class Fargate:
         
         # Create security group
         sg = aws.ec2.SecurityGroup(f"{self.name}-sg",
-            vpc_id=self.vpc_config.vpc.id,
+            vpc_id=self.vpc_config['vpc'].id,
             ingress=[aws.ec2.SecurityGroupIngressArgs(
                 protocol="tcp",
                 from_port=self.port,
@@ -265,7 +265,7 @@ class Fargate:
             task_definition=task_def.arn,
             network_configuration=aws.ecs.ServiceNetworkConfigurationArgs(
                 assign_public_ip=True,
-                subnets=[s.id for s in self.vpc_config.public_subnets],
+                subnets=[s.id for s in self.vpc_config['public_subnets']],
                 security_groups=[sg.id]))
         
         self._service = service

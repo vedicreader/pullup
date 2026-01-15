@@ -1,0 +1,3 @@
+name: aws-fargate-example
+runtime: python
+description: AWS VPC and Fargate deployment using pullup

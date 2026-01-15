@@ -12,6 +12,7 @@ dependencies = [
     "pulumi-aws>=7.13.0",
     "pulumi-azure>=6.30.0",
     "pulumi-gcp>=9.6.0",
+    "pulumi-docker>=4.0.0",
 ]
 
 [tool.uv]

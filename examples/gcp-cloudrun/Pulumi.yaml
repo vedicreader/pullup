@@ -1,0 +1,3 @@
+name: gcp-cloudrun-example
+runtime: python
+description: GCP Cloud Run deployment using pullup

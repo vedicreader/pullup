@@ -1,0 +1,3 @@
+name: aws-s3-example
+runtime: python
+description: AWS S3 bucket with security defaults using pullup

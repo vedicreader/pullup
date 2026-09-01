@@ -1,24 +1,45 @@
 [build-system]
-requires = ["setuptools>=64.0"]
+requires = ["setuptools>=64"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name="pullup"
-requires-python=">=3.10"
-dynamic = [ "keywords", "description", "version", "readme", "license", "authors", "classifiers", "entry-points", "scripts", "urls", "optional-dependencies" ]
-dependencies = [
-    "fastcore>=1.8.17",
-    "pulumi>=3.210.0",
-    "pulumi-aws>=7.13.0",
-    "pulumi-azure>=6.30.0",
-    "pulumi-gcp>=9.6.0",
-]
+name = "pullup"
+dynamic = ["version"]
+description = "get a project from your laptop to running somewhere: what it is, the steps that release it, the workflows that do it on a server, and the machines underneath"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "Apache-2.0"}
+authors = [{name = "Karthik Rajgopal", email = "karthik.rajgopal@hotmail.com"}]
+keywords = ['nbdev', 'jupyter', 'notebook', 'python']
+classifiers = ["Natural Language :: English", "Intended Audience :: Developers", "Development Status :: 3 - Alpha", "Programming Language :: Python :: 3", "Programming Language :: Python :: 3 :: Only"]
+# `ptymini` runs each step on a pty and keeps a ring of its output, which is what makes a step's
+# transcript replayable for a viewer that joins late.
+dependencies = ['fastcore>=1.8.17', 'ptymini>=0.0.5', 'pyyaml>=6.0']
 
-[tool.uv]
-cache-keys = [{ file = "pyproject.toml" }, { file = "settings.ini" }, { file = "setup.py" }]
-dev-dependencies = [
-    "jupyterlab>=4.5.0",
-    "jupyterlab-quarto>=0.3.5",
-    "nbdev>=2.4.6",
-    "notebook>=7.5.0",
-]
+[project.urls]
+Repository = "https://github.com/vedicreader/pullup"
+Documentation = "https://vedicreader.github.io/pullup"
+
+[project.entry-points.nbdev]
+pullup = "pullup._modidx:d"
+
+[project.optional-dependencies]
+# The cloud half is optional and imported where it is used: a pipeline that runs `pytest` needs
+# none of it, and saying so keeps the base install small.
+cloud = ['dockeasy>=0.0.5', 'gheasy>=0.0.9', 'vpseasy>=0.0.18', 'cfeasy>=0.0.4',
+         'python-dotenv>=1.0.0', 'keyring>=25.0.0']
+dev = ['pytest>=8.0.0', 'pytest-asyncio>=1.0.0', 'nbdev>=2.4.6', 'pullup[cloud]']
+
+[tool.setuptools.dynamic]
+version = {attr = "pullup.__version__"}
+
+[tool.setuptools.packages.find]
+include = ["pullup"]
+
+[tool.nbdev]
+doc_host = "https://vedicreader.github.io"
+doc_baseurl = "/pullup"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

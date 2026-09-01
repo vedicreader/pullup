@@ -171,6 +171,14 @@ def _run_job(wfb, job_id, opts):
         step = step.end_step() if i + 1 < len(cmds) else step
     step.end_job()
 
+# %% ../nbs/06_wfbuild.ipynb #5d8a7a5c
+def _adopt(wfb, job_id, needs):
+    "Put compose's id and needs onto the job a gheasy preset just added under its own."
+    job = wfb._jobs[-1]
+    wfb._job_map.pop(job._id, None)
+    job._id, wfb._job_map[job_id] = job_id, job
+    if needs: job._data['needs'] = needs
+
 # %% ../nbs/06_wfbuild.ipynb #2f83440b
 def compose(spec, schema=None, app=''):
     "A spec as YAML, built entirely with gheasy. Job ids are made unique as they are added."
@@ -208,6 +216,7 @@ def compose(spec, schema=None, app=''):
         elif pid == 'fastship': fastship_job(wfb, job_id, opts['needs'])
         elif pid == 'deploy': deploy_job(wfb, job_id, opts, schema, app)
         elif pid == 'run': _run_job(wfb, job_id, opts)
+        _adopt(wfb, job_id, opts['needs'])
     return wfb.build().to_yaml()
 
 # %% ../nbs/06_wfbuild.ipynb #2e5061ea

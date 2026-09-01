@@ -55,7 +55,7 @@ def venv_env(python=None, env=None):
 def _dockeasy():
     try: from dockeasy.core import env_get, env_set, secret_get, secret_set
     except ImportError as e:
-        raise EnvError('environment values are stored by dockeasy: pip install "pullup[store]"') from e
+        raise EnvError('environment values are stored by dockeasy: pip install "pullup[cloud]"') from e
     import logging
     logging.getLogger('dotenv.main').setLevel(logging.ERROR)
     return env_get, env_set, secret_get, secret_set

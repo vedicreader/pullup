@@ -91,7 +91,9 @@ class Workflows:
                 parts = [f'{k}: {", ".join(map(str, v))}' if isinstance(v, list) else f'{k}: {v}'
                     for k, v in spec.items() if k in ('branches', 'tags', 'paths', 'types', 'cron')]
                 detail = ' · '.join(parts)
-            elif isinstance(spec, list): detail = ', '.join(map(str, spec))
+            elif isinstance(spec, list):
+                flat = [', '.join(map(str, x.values())) if isinstance(x, dict) else str(x) for x in spec]
+                detail = ', '.join(flat)
             rows.append({'event': str(event), 'detail': detail})
         return rows
     @staticmethod

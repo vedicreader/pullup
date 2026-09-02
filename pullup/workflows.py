@@ -148,10 +148,10 @@ class Workflows:
         except Exception: return ''
     def _api(self):
         core = _gheasy()
-        token = core._resolve_gh_token()
+        token = core.gh_token()
         if not token:
             raise WorkflowError('set GITHUB_TOKEN: put it in the environment store, or export it in the shell this ran from')
-        owner, name, api = core._gh_api(token, str(self.root))
+        owner, name, api = core.gh_api(token, str(self.root))
         return owner, name, _sync_api(core, owner, name, token, api)
     def status(self):
         "Whether the GitHub half is usable, and if not, which of gheasy, remote or token is missing."
@@ -160,7 +160,7 @@ class Workflows:
         try: core = _gheasy()
         except WorkflowError as e: return row | {'gheasy': False, 'why': str(e)}
         row['repo'] = self.repo()
-        row['token'] = bool(core._resolve_gh_token())
+        row['token'] = bool(core.gh_token())
         if not row['repo']: row['why'] = 'no GitHub remote on this repository'
         elif not row['token']: row['why'] = 'no GITHUB_TOKEN'
         return row

@@ -220,17 +220,19 @@ def compose(spec, schema=None, app=''):
     return wfb.build().to_yaml()
 
 # %% ../nbs/06_wfbuild.ipynb #2e5061ea
-def spec_path(root, file): return Path(root)/SPEC_DIR/Path(file).with_suffix('.json')
+def spec_path(root, file, dir=None):
+    "Where the spec for one workflow file is kept. A host with its own place passes `dir`."
+    return Path(root)/(dir or SPEC_DIR)/Path(file).with_suffix('.json')
 
 # %% ../nbs/06_wfbuild.ipynb #940d0b2a
-def load_spec(root, file):
+def load_spec(root, file, dir=None):
     "The spec a workflow was built from, or None when it was written some other way."
-    try: return json.loads(spec_path(root, file).read_text(encoding='utf-8'))
+    try: return json.loads(spec_path(root, file, dir).read_text(encoding='utf-8'))
     except (OSError, ValueError): return None
 
 # %% ../nbs/06_wfbuild.ipynb #11583f6a
-def save_spec(root, file, spec):
-    p = spec_path(root, file)
+def save_spec(root, file, spec, dir=None):
+    p = spec_path(root, file, dir)
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(json.dumps(spec, indent=2) + '\n', encoding='utf-8')
     return p

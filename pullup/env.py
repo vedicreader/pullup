@@ -6,7 +6,8 @@ import asyncio, inspect, os, sys, threading
 from fastcore.all import Path
 
 # %% auto #0
-__all__ = ['BUNDLE_ONLY', 'EnvError', 'strip_bundle', 'clean_env', 'venv_env', 'EnvStore', 'env_value']
+__all__ = ['BUNDLE_ONLY', 'EnvError', 'strip_bundle', 'clean_env', 'venv_env', 'use_extra', 'extra', 'needs_extra', 'EnvStore',
+           'env_value']
 
 # %% ../nbs/00_env.ipynb #1e650a43
 BUNDLE_ONLY = ('PYTHONHOME', 'PYTHONPATH', 'PYTHONEXECUTABLE', '__PYVENV_LAUNCHER__', 'RESOURCEPATH')
@@ -51,11 +52,23 @@ def venv_env(python=None, env=None):
     env.pop('PYTHONHOME', None)
     return env
 
+# %% ../nbs/00_env.ipynb #54dbd62c
+_extra = 'pullup[cloud]'
+
+def use_extra(name):
+    "Name the extra every message about the cloud half tells the reader to install."
+    global _extra
+    _extra = str(name)
+
+def extra(): return _extra
+
+def needs_extra(what): return f'{what}: pip install "{_extra}"'
+
 # %% ../nbs/00_env.ipynb #e34073db
 def _dockeasy():
     try: from dockeasy.core import env_get, env_set, secret_get, secret_set
     except ImportError as e:
-        raise EnvError('environment values are stored by dockeasy: pip install "pullup[cloud]"') from e
+        raise EnvError(needs_extra('environment values are stored by dockeasy')) from e
     import logging
     logging.getLogger('dotenv.main').setLevel(logging.ERROR)
     return env_get, env_set, secret_get, secret_set

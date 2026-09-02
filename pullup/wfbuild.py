@@ -4,8 +4,8 @@
 from __future__ import annotations
 
 # %% auto #0
-__all__ = ['SPEC_DIR', 'TRIGGERS', 'PRESETS', 'preset_rows', 'deploy_job', 'fastship_job', 'nbdev_job', 'compose', 'spec_path',
-           'load_spec', 'save_spec']
+__all__ = ['SPEC_DIR', 'TRIGGERS', 'PRESETS', 'use_spec_dir', 'spec_dir', 'preset_rows', 'deploy_job', 'fastship_job',
+           'nbdev_job', 'compose', 'spec_path', 'load_spec', 'save_spec']
 
 # %% ../nbs/06_wfbuild.ipynb #8288302f
 import json
@@ -15,6 +15,14 @@ from fastcore.all import Path
 
 # %% ../nbs/06_wfbuild.ipynb #fc6f6676
 SPEC_DIR = 'workflows'
+_spec_dir = SPEC_DIR
+
+def use_spec_dir(dir):
+    "Name the directory a spec is kept in, relative to the repository root."
+    global _spec_dir
+    _spec_dir = str(dir)
+
+def spec_dir(): return _spec_dir
 
 # %% ../nbs/06_wfbuild.ipynb #e750e281
 TRIGGERS = [
@@ -220,17 +228,18 @@ def compose(spec, schema=None, app=''):
     return wfb.build().to_yaml()
 
 # %% ../nbs/06_wfbuild.ipynb #2e5061ea
-def spec_path(root, file): return Path(root)/SPEC_DIR/Path(file).with_suffix('.json')
+def spec_path(root, file, dir=None):
+    return Path(root)/(dir or _spec_dir)/Path(file).with_suffix('.json')
 
 # %% ../nbs/06_wfbuild.ipynb #940d0b2a
-def load_spec(root, file):
+def load_spec(root, file, dir=None):
     "The spec a workflow was built from, or None when it was written some other way."
-    try: return json.loads(spec_path(root, file).read_text(encoding='utf-8'))
+    try: return json.loads(spec_path(root, file, dir).read_text(encoding='utf-8'))
     except (OSError, ValueError): return None
 
 # %% ../nbs/06_wfbuild.ipynb #11583f6a
-def save_spec(root, file, spec):
-    p = spec_path(root, file)
+def save_spec(root, file, spec, dir=None):
+    p = spec_path(root, file, dir)
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(json.dumps(spec, indent=2) + '\n', encoding='utf-8')
     return p

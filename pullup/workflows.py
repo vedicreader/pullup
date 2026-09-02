@@ -42,8 +42,8 @@ def _yaml():
     the base install, and every part of this module that *writes* one goes through gheasy anyway.
     """
     try:
-        from gheasy.workflow import _yaml_instance
-        return _yaml_instance()
+        from gheasy.workflow import yaml_instance
+        return yaml_instance()
     except ImportError: pass
     import yaml
     class _Plain:

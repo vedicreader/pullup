@@ -113,7 +113,7 @@ def blame(text, checkouts=(), family=None):
     family = [f | {'package': pkg} for f in frames(text)
               if (pkg := _package_of(f['file'], names))]
     found = family[-1] if family else None
-    error = ifnone(first(reversed(text.strip().splitlines()), _is_error), '').rstrip()
+    error = ifnone(first((l.strip() for l in reversed(text.strip().splitlines())), _is_error), '')
     if found is None:
         return {'package': '', 'file': '', 'line': 0, 'fn': '', 'error': error, 'open': ''}
     open_at = found['file']

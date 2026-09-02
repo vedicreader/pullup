@@ -36,6 +36,12 @@ def _gheasy():
     except ImportError as e:
         raise WorkflowError(needs_extra('this needs gheasy')) from e
 
+def _opened(core, name, was=None):
+    "gheasy's helper under whichever spelling it has: public from 0.0.10, underscored before it."
+    for n in (name, was or f'_{name}'):
+        if (got := getattr(core, n, None)) is not None: return got
+    raise WorkflowError(f'this gheasy has neither {name} nor {was or "_" + name}')
+
 # %% ../nbs/05_workflows.ipynb #4df5db4b
 def _yaml():
     """A YAML loader for reading a workflow file.
@@ -144,15 +150,15 @@ class Workflows:
         "`owner/name` from the origin remote, or `''` when there is no GitHub remote."
         try:
             core = _gheasy()
-            owner, name = core._get_repo_slug(str(self.root))
+            owner, name = _opened(core, 'repo_slug', '_get_repo_slug')(str(self.root))
             return f'{owner}/{name}'
         except Exception: return ''
     def _api(self):
         core = _gheasy()
-        token = core._resolve_gh_token()
+        token = _opened(core, 'gh_token', '_resolve_gh_token')()
         if not token:
             raise WorkflowError('set GITHUB_TOKEN — add it in Environment below, or export it before starting Leela')
-        owner, name, api = core._gh_api(token, str(self.root))
+        owner, name, api = _opened(core, 'gh_api')(token, str(self.root))
         return owner, name, _sync_api(core, owner, name, token, api)
     def status(self):
         "Whether the GitHub half is usable, and if not, which of gheasy, remote or token is missing."
@@ -161,7 +167,7 @@ class Workflows:
         try: core = _gheasy()
         except WorkflowError as e: return row | {'gheasy': False, 'why': str(e)}
         row['repo'] = self.repo()
-        row['token'] = bool(core._resolve_gh_token())
+        row['token'] = bool(_opened(core, 'gh_token', '_resolve_gh_token')())
         if not row['repo']: row['why'] = 'no GitHub remote on this repository'
         elif not row['token']: row['why'] = 'no GITHUB_TOKEN'
         return row

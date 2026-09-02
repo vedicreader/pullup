@@ -100,8 +100,9 @@ def _package_of(path, names):
 
 # %% ../nbs/07_stack.ipynb #7e3e93a0
 def _is_error(line):
-    "A line that reads like `SomeError: message` rather than a frame or a caret marker."
-    return bool(line) and not line.startswith(('File "', '^', '~', '|')) and ':' in line and '    ' not in line[:4]
+    "A line that reads like `SomeError: message` or a bare `SomeError`, not a frame, a source echo or the header."
+    if not line or line.startswith((' ', 'File "', '^', '~', '|', 'Traceback (')): return False
+    return ':' in line or line.rstrip().replace('.', '').isidentifier()
 
 # %% ../nbs/07_stack.ipynb #2bf1a3dd
 def blame(text, checkouts=(), family=None):
@@ -112,7 +113,7 @@ def blame(text, checkouts=(), family=None):
     family = [f | {'package': pkg} for f in frames(text)
               if (pkg := _package_of(f['file'], names))]
     found = family[-1] if family else None
-    error = ifnone(first((l.strip() for l in reversed(text.strip().splitlines())), _is_error), '')
+    error = ifnone(first(reversed(text.strip().splitlines()), _is_error), '').rstrip()
     if found is None:
         return {'package': '', 'file': '', 'line': 0, 'fn': '', 'error': error, 'open': ''}
     open_at = found['file']

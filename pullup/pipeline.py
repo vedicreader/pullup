@@ -197,8 +197,10 @@ class Pipeline:
     async def _drain(self, step):
         "Pump the step's pty to every viewer, record how it ended, then decide what happens next."
         pty = self.pty
+        # from_start, because the child can write and exit before this task first runs. The
+        # ring is this step's own, so replaying it from its first byte duplicates nothing.
         try:
-            async for chunk in pty.attach(from_start=False): self._broadcast(chunk)
+            async for chunk in pty.attach(from_start=True): self._broadcast(chunk)
         except Exception as e:
             self._broadcast(f'\r\n\x1b[31m{type(e).__name__}: {e}\x1b[0m\r\n'.encode())
         code = pty.exit_code

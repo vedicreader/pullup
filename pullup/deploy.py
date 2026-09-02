@@ -356,7 +356,7 @@ class Deploy(Pipeline):
         except ImportError:
             pass
         try:
-            from ..workflows.workflows import Workflows
+            from pullup.workflows import Workflows
             written.append(Workflows(self.root).add('deploy')['path'])
         except Exception:
             pass

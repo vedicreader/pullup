@@ -6,9 +6,19 @@ import asyncio, inspect, os, sys, threading
 from fastcore.all import Path
 
 # %% auto #0
-__all__ = ['BUNDLE_ONLY', 'EnvError', 'strip_bundle', 'clean_env', 'venv_env', 'EnvStore', 'env_value']
+__all__ = ['BUNDLE_ONLY', 'use_extra', 'extra', 'EnvError', 'strip_bundle', 'clean_env', 'venv_env', 'EnvStore', 'env_value']
 
 # %% ../nbs/00_env.ipynb #1e650a43
+_EXTRA = os.environ.get('PULLUP_EXTRA') or 'pullup[cloud]'
+
+def use_extra(spec):
+    "Name the install a caller is told to run for the cloud half: `use_extra('leela[github]')`."
+    global _EXTRA
+    _EXTRA = str(spec)
+    return _EXTRA
+
+def extra(): return _EXTRA
+
 BUNDLE_ONLY = ('PYTHONHOME', 'PYTHONPATH', 'PYTHONEXECUTABLE', '__PYVENV_LAUNCHER__', 'RESOURCEPATH')
 
 class EnvError(RuntimeError): pass
@@ -55,7 +65,7 @@ def venv_env(python=None, env=None):
 def _dockeasy():
     try: from dockeasy.core import env_get, env_set, secret_get, secret_set
     except ImportError as e:
-        raise EnvError('environment values are stored by dockeasy: pip install "pullup[cloud]"') from e
+        raise EnvError(f'environment values are stored by dockeasy: pip install "{extra()}"') from e
     import logging
     logging.getLogger('dotenv.main').setLevel(logging.ERROR)
     return env_get, env_set, secret_get, secret_set

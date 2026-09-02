@@ -16,6 +16,9 @@ from shutil import which
 from fastcore.all import Path, first
 
 # %% ../nbs/05_workflows.ipynb #4b896edd
+from .env import extra
+
+#| export
 from .stack import installed
 
 # %% ../nbs/05_workflows.ipynb #e75cc3b9
@@ -31,7 +34,7 @@ def _gheasy():
         import gheasy.core as core
         return core
     except ImportError as e:
-        raise WorkflowError('this needs gheasy: pip install "pullup[cloud]"') from e
+        raise WorkflowError(f'this needs gheasy: pip install "{extra()}"') from e
 
 # %% ../nbs/05_workflows.ipynb #4df5db4b
 def _yaml():
@@ -345,7 +348,7 @@ class Workflows:
         row = {'dockerfile': (self.root/'Dockerfile').exists(), 'base': '', 'preview': '', 'why': ''}
         try: from dockeasy.core import detect_app
         except ImportError:
-            return row | {'why': 'detecting the build needs dockeasy: pip install "pullup[cloud]"'}
+            return row | {'why': f'detecting the build needs dockeasy: pip install "{extra()}"'}
         try: text = str(detect_app(str(self.root)))
         except Exception as e: return row | {'why': f'{type(e).__name__}: {e}'}
         return row | {'preview': text, 'base': _from_line(text)}
@@ -353,7 +356,7 @@ class Workflows:
         "Write the Dockerfile dockeasy detected. Refuses to overwrite one that already exists."
         try: from dockeasy.core import detect_app
         except ImportError as e:
-            raise WorkflowError('writing a Dockerfile needs dockeasy: pip install "pullup[cloud]"') from e
+            raise WorkflowError(f'writing a Dockerfile needs dockeasy: pip install "{extra()}"') from e
         path = self.root/'Dockerfile'
         if path.exists(): raise WorkflowError('this project already has a Dockerfile')
         text = str(detect_app(str(self.root)))

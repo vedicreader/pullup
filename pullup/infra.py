@@ -13,7 +13,7 @@ import os
 from contextlib import contextmanager
 
 # %% ../nbs/08_infra.ipynb #6928e289
-from .env import EnvStore
+from .env import EnvStore, extra
 
 # %% ../nbs/08_infra.ipynb #a9f7a1a1
 from .stack import installed
@@ -45,7 +45,7 @@ def _record(r):
 # %% ../nbs/08_infra.ipynb #7c80c35d
 def _why(what, pkg, e):
     "Why `pkg` is unavailable. A findable module can still fail to execute, and then it is not missing."
-    if isinstance(e, ImportError): return f'{what} need {pkg}: pip install "pullup[cloud]"'
+    if isinstance(e, ImportError): return f'{what} need {pkg}: pip install "{extra()}"'
     return f'{what} need {pkg}, which is installed but does not import: {e}'
 
 # %% ../nbs/08_infra.ipynb #f5433bf9

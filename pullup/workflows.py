@@ -147,7 +147,7 @@ class Workflows:
         core = _gheasy()
         token = core._resolve_gh_token()
         if not token:
-            raise WorkflowError('set GITHUB_TOKEN — add it in Environment below, or export it before starting Leela')
+            raise WorkflowError('set GITHUB_TOKEN: put it in the environment store, or export it in the shell this ran from')
         owner, name, api = core._gh_api(token, str(self.root))
         return owner, name, _sync_api(core, owner, name, token, api)
     def status(self):

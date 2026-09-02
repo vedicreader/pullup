@@ -22,7 +22,7 @@ class Step:
     argv: list = field(default_factory=list)    # spelled out, where `cmd` would not split correctly
     meta: dict = field(default_factory=dict)
     def dict(self): return {'id': self.id, 'label': self.label, 'cmd': self.cmd, 'doc': self.doc,
-                            'needs': list(self.needs), 'meta': dict(self.meta)}
+                            'needs': list(self.needs), 'argv': list(self.argv), 'meta': dict(self.meta)}
 
 # %% ../nbs/01_project.ipynb #e0076880
 def _toml(root, name='pyproject.toml'):

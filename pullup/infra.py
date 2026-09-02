@@ -42,6 +42,12 @@ def _record(r):
             'content': content, 'proxied': bool(r.get('proxied')), 'ttl': r.get('ttl'),
             'tunnel': content.endswith('.cfargotunnel.com')}
 
+# %% ../nbs/08_infra.ipynb #7c80c35d
+def _why(what, pkg, e):
+    "Why `pkg` is unavailable. A findable module can still fail to execute, and then it is not missing."
+    if isinstance(e, ImportError): return f'{what} need {pkg}: pip install "pullup[cloud]"'
+    return f'{what} need {pkg}, which is installed but does not import: {e}'
+
 # %% ../nbs/08_infra.ipynb #f5433bf9
 class Infra:
     "Hetzner and Cloudflare, through vpseasy and cfeasy, with this project's tokens."
@@ -58,13 +64,13 @@ class Infra:
                 'keys': [self.HCLOUD, self.CF_TOKEN]}
     def _hetzner(self):
         try: from vpseasy.core import Hetzner
-        except ImportError as e: raise InfraError('servers need vpseasy: pip install "pullup[cloud]"') from e
+        except Exception as e: raise InfraError(_why('servers', 'vpseasy', e)) from e
         if not self.token(self.HCLOUD):
             raise InfraError('HCLOUD_TOKEN is not set — add it in Workflows → Environment')
         with _with_env({self.HCLOUD: self.token(self.HCLOUD)}): return Hetzner()
     def _cf(self):
         try: from cfeasy.core import CF
-        except ImportError as e: raise InfraError('tunnels and DNS need cfeasy: pip install "pullup[cloud]"') from e
+        except Exception as e: raise InfraError(_why('tunnels and DNS', 'cfeasy', e)) from e
         token = self.token(self.CF_TOKEN)
         if not token: raise InfraError('CLOUDFLARE_API_TOKEN is not set — add it in Workflows → Environment')
         return CF(token=token)

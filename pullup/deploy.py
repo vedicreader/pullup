@@ -331,7 +331,9 @@ class Deploy(Pipeline):
     def defaults(root): return list(DEPLOY_STEPS)
     def target(self):
         "Where this deploy goes and what it is still missing, from the store the steps will read."
-        store = self.env if isinstance(self.env, EnvStore) else EnvStore()
+        # Whatever answers `get`, not only an `EnvStore`: a host keeps its own store, and the
+        # class check sent every value read here to a second one that had never been configured.
+        store = self.env if hasattr(self.env, 'get') else EnvStore()
         def value(key, default=''): return env_value(store, key, default)
         missing = [k for k, v in DEPLOY_KEYS.items()
                    if v is None and not env_value(store, k, secret=True)]

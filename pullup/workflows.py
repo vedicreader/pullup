@@ -44,15 +44,9 @@ def _opened(core, name, was=None):
 
 # %% ../nbs/05_workflows.ipynb #4df5db4b
 def _yaml():
-    """A YAML loader for reading a workflow file.
-
-    gheasy's ruamel instance where gheasy is installed, so a file it wrote round-trips through the
-    same parser it was written with. Plain pyyaml otherwise: reading a workflow is worth having in
-    the base install, and every part of this module that *writes* one goes through gheasy anyway.
-    """
+    "gheasy's ruamel instance for reading a workflow, or plain pyyaml where gheasy is not installed."
     try:
         import gheasy.workflow as w
-        #: public from gheasy 0.0.10; the same function with an underscore before it
         if (mk := getattr(w, 'yaml_instance', None) or getattr(w, '_yaml_instance', None)): return mk()
     except ImportError: pass
     import yaml

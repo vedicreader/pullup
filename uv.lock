@@ -402,7 +402,7 @@ name = "cryptography"
 version = "50.0.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cffi", marker = "(python_full_version < '3.12' and platform_python_implementation != 'PyPy') or (platform_python_implementation != 'PyPy' and sys_platform != 'emscripten')" },
+    { name = "cffi", marker = "platform_python_implementation != 'PyPy'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/bb/ad/5d6702db60b1e40b41ef513b6967ff5848f307d50f8449baf1634f5908f1/cryptography-50.0.1.tar.gz", hash = "sha256:5dd9bda1c12b4162f6ff568eeb5e0ff956c28d14406e875cfe8a63a2d414ff20", size = 880381, upload-time = "2026-08-25T19:45:45.499Z" }
 wheels = [
@@ -654,7 +654,7 @@ wheels = [
 
 [[package]]
 name = "gheasy"
-version = "0.0.9"
+version = "0.0.10"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cyclopts" },
@@ -663,9 +663,9 @@ dependencies = [
     { name = "ruamel-yaml" },
     { name = "tomlkit" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d7/d4/a47bda353869dbd5c13fcd55049a444e9a1b68438c927d4d3aec792952d0/gheasy-0.0.9.tar.gz", hash = "sha256:28927a798cdd2547aa637ad2fed8d610d2d5fac9e556bdedddf287842cfe404f", size = 53393, upload-time = "2026-08-27T09:17:07.245Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e8/4d/a47031eda26dcda6a07b2260e1e9641c21363532e9e6f5741db1b2b10c69/gheasy-0.0.10.tar.gz", hash = "sha256:657dc5fc40c5ea962ad2d6d4b07b1b7eace2cd383d1723ee4de954b09f36361f", size = 59059, upload-time = "2026-09-04T00:15:43.04Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6b/25/0903913e1bdd75e373194c1a54a15dee6badc75345d97f2d59c14e225d81/gheasy-0.0.9-py3-none-any.whl", hash = "sha256:e426a658601fc9f6ab320bdbb1325995cb246e32394df627288bb33951a21d50", size = 54773, upload-time = "2026-08-27T09:17:06.114Z" },
+    { url = "https://files.pythonhosted.org/packages/48/36/66cf858718dad5ade90bb1df76d900f77aef25027b6c869c5c9fee490f49/gheasy-0.0.10-py3-none-any.whl", hash = "sha256:6bf88f60435f2f25ca48c856e2d4d4d5e74b6133b3a7fcfd6a5a5088a830cf30", size = 61307, upload-time = "2026-09-04T00:15:41.896Z" },
 ]
 
 [[package]]
@@ -708,8 +708,8 @@ name = "httpcore2"
 version = "2.12.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "h11", marker = "python_full_version < '3.12' or sys_platform != 'emscripten'" },
-    { name = "truststore", marker = "python_full_version < '3.12' or sys_platform != 'emscripten'" },
+    { name = "h11" },
+    { name = "truststore" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/be/ad/f4f0e57345f1870f3e8cb624e058d7eca6e5a27d33bcc3311d9b618734cd/httpcore2-2.12.0.tar.gz", hash = "sha256:9293522bba0aa7c4c8e9e3f040c16575bd8868e155a77fa30c7a9085a5eae648", size = 67548, upload-time = "2026-08-18T13:22:08.211Z" }
 wheels = [
@@ -771,7 +771,7 @@ name = "importlib-metadata"
 version = "8.7.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "zipp", marker = "(python_full_version < '3.14' and sys_platform != 'emscripten') or (python_full_version < '3.12' and sys_platform == 'emscripten')" },
+    { name = "zipp" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/76/66/650a33bd90f786193e4de4b3ad86ea60b53c89b669a5c7be931fac31cdb0/importlib_metadata-8.7.0.tar.gz", hash = "sha256:d13b81ad223b890aa16c5471f2ac3056cf76c5f10f82d6f9292f0b415f389000", size = 56641, upload-time = "2025-04-27T15:29:01.736Z" }
 wheels = [
@@ -1431,7 +1431,7 @@ name = "pexpect"
 version = "4.9.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "ptyprocess", marker = "python_full_version < '3.12' or sys_platform != 'emscripten'" },
+    { name = "ptyprocess" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/42/92/cc564bf6381ff43ce1f4d06852fc19a2f11d180f23dc32d9588bee2f149d/pexpect-4.9.0.tar.gz", hash = "sha256:ee7d41123f3c9911050ea2c2dac107568dc43b2d3b0c7557a33212c398ead30f", size = 166450, upload-time = "2023-11-25T09:07:26.339Z" }
 wheels = [
@@ -1533,49 +1533,43 @@ wheels = [
 name = "pullup"
 source = { editable = "." }
 dependencies = [
-    { name = "fastcore" },
-    { name = "ptymini" },
-    { name = "pyyaml" },
-]
-
-[package.optional-dependencies]
-cloud = [
     { name = "cfeasy" },
     { name = "dockeasy" },
+    { name = "fastcore" },
     { name = "gheasy" },
     { name = "keyring" },
+    { name = "ptymini" },
     { name = "python-dotenv" },
+    { name = "pyyaml" },
     { name = "vpseasy" },
 ]
+
+[package.dev-dependencies]
 dev = [
-    { name = "cfeasy" },
-    { name = "dockeasy" },
-    { name = "gheasy" },
-    { name = "keyring" },
     { name = "nbdev" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
-    { name = "python-dotenv" },
-    { name = "vpseasy" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "cfeasy", marker = "extra == 'cloud'", specifier = ">=0.0.4" },
-    { name = "dockeasy", marker = "extra == 'cloud'", specifier = ">=0.0.5" },
+    { name = "cfeasy", specifier = ">=0.0.4" },
+    { name = "dockeasy", specifier = ">=0.0.5" },
     { name = "fastcore", specifier = ">=1.8.17" },
-    { name = "gheasy", marker = "extra == 'cloud'", specifier = ">=0.0.9" },
-    { name = "keyring", marker = "extra == 'cloud'", specifier = ">=25.0.0" },
-    { name = "nbdev", marker = "extra == 'dev'", specifier = ">=3.3.11" },
+    { name = "gheasy", specifier = ">=0.0.10" },
+    { name = "keyring", specifier = ">=25.0.0" },
     { name = "ptymini", specifier = ">=0.0.5" },
-    { name = "pullup", extras = ["cloud"], marker = "extra == 'dev'" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
-    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=1.0.0" },
-    { name = "python-dotenv", marker = "extra == 'cloud'", specifier = ">=1.0.0" },
+    { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "pyyaml", specifier = ">=6.0" },
-    { name = "vpseasy", marker = "extra == 'cloud'", specifier = ">=0.0.18" },
+    { name = "vpseasy", specifier = ">=0.0.18" },
 ]
-provides-extras = ["cloud", "dev"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "nbdev", specifier = ">=3.3.11" },
+    { name = "pytest", specifier = ">=8.0.0" },
+    { name = "pytest-asyncio", specifier = ">=1.0.0" },
+]
 
 [[package]]
 name = "pure-eval"
@@ -2135,8 +2129,8 @@ name = "secretstorage"
 version = "3.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cryptography", marker = "python_full_version < '3.12' or sys_platform != 'emscripten'" },
-    { name = "jeepney", marker = "python_full_version < '3.12' or sys_platform != 'emscripten'" },
+    { name = "cryptography" },
+    { name = "jeepney" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/1c/03/e834bcd866f2f8a49a85eaff47340affa3bfa391ee9912a952a1faa68c7b/secretstorage-3.5.0.tar.gz", hash = "sha256:f04b8e4689cbce351744d5537bf6b1329c6fc68f91fa666f60a380edddcd11be", size = 19884, upload-time = "2025-11-23T19:02:53.191Z" }
 wheels = [

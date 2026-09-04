@@ -2,6 +2,9 @@
 
 <!-- do not remove -->
 
+## 0.0.6
+release
+
 ## 0.0.5
 pullup github, infra workflows
 

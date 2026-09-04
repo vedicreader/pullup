@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=64"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "pullup"
@@ -23,11 +23,14 @@ Documentation = "https://vedicreader.github.io/pullup"
 [project.entry-points.nbdev]
 pullup = "pullup._modidx:d"
 
-[tool.setuptools.dynamic]
-version = {attr = "pullup.__version__"}
+[tool.hatch.version]
+path = "pullup/__init__.py"
 
-[tool.setuptools.packages.find]
-include = ["pullup"]
+[tool.hatch.build.targets.wheel]
+packages = ["pullup"]
+
+[tool.hatch.build.targets.sdist]
+include = ["/pullup", "/README.md", "/pyproject.toml"]
 
 [tool.nbdev]
 doc_host = "https://vedicreader.github.io"

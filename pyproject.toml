@@ -39,7 +39,3 @@ asyncio_mode = "auto"
 
 [dependency-groups]
 dev = ['pytest>=8.0.0', 'pytest-asyncio>=1.0.0', 'nbdev>=3.3.11']
-
-[tool.uv.sources]
-# The checkout beside this one, until gheasy 0.0.10 is on PyPI; drop it to take the published one.
-gheasy = { path = "../gheasy", editable = true }

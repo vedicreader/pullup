@@ -116,7 +116,6 @@ def _triggers(wfb, on):
     "Apply the trigger part of a spec, whose one shape gheasy renders into `on:`'s three."
     used = False
     push, tags = on.get('push'), on.get('tags')
-    # gheasy renders one `push:` block, so branches and tags go into the same call.
     if push not in (None, False) or tags not in (None, False):
         wfb.on.push(branches=_branches(push) if push not in (None, False) else None,
             tags=_listy('v*' if tags is True else tags) or None)

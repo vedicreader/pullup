@@ -6,120 +6,130 @@
 ## Install
 
 ``` sh
-pip install pullup            # the project, the plan, the runner, the workflows, and the cloud half
+pip install pullup
 ```
 
-The cloud half is imported where it is used. A pipeline that runs `pytest` needs none of it.
+Cloud integrations load only when used.
 
-## What kind of project is this?
+## Project detection
+
+[`Project`](https://vedicreader.github.io/pullup/project.html#project) detects the release flow from files in the project directory.
 
 ``` python
-from pullup import Project
-
-p = Project('~/code/myrepo')
-p.kind           # 'nbdev' | 'fastship' | 'maturin' | 'crate' | 'plain'
-p.steps()        # the commands that release a project of that kind
+project = Project(root)
+project.kind, [step.id for step in project.steps()]
 ```
 
-`kind` is read from the folder: `settings.ini` or `[tool.nbdev]` makes it nbdev, `Cargo.toml`
-with a maturin backend makes it maturin, and so on. Rust is asked before fastship, because a
-maturin crate has a `pyproject.toml` too and the fastship flow would try to upload a wheel that
-only the CI runners can build.
+    ('nbdev', ['prepare', 'bump', 'gh', 'pypi'])
 
-## Running the steps
+## Running steps
+
+Steps run in one PTY. Automatic execution stops at the first failure.
 
 ``` python
-from pullup import Release
-
-r = Release('~/code/myrepo', python='~/code/myrepo/.venv/bin/python')
-await r.start()          # run the first unfinished step, then keep going while they pass
-r.state()                # every step, its status, exit code, timings, and unset keys
-r.tail(80)               # the transcript, escapes gone
-r.stop()                 # kill the running step; what already passed stays passed
+pipeline = Pipeline(root, dir='.demo')
+pipeline.save([{'id': 'hello', 'cmd': 'say hello',
+                'argv': [sys.executable, '-c', 'print("ready")']}])
+await pipeline.start()
+pipeline.state()['done'], pipeline.tail().splitlines()[-2:]
 ```
 
-- **`start(step_id='', auto=True)`** runs one step and, while `auto`, the next after it passes.
-  It stops at the first failure, because a release that publishes from a tree whose tests never
-  passed is worse than one that stops.
-- **`skip(id)`** marks a step done without running it. **`reset()`** forgets the results and
-  leaves the commands alone.
-- **`save(steps)`** persists an edited plan and refuses one with no runnable command in it.
-  **`reset_plan()`** goes back to the default for this kind of project.
-- **`needs()`** lists every environment key the plan names; **`missing(step)`** says which of
-  them nothing can produce, so a panel can grey out a step before anyone presses it.
+    (False, ['', '❯ say hello'])
 
-Commands run on a pty through [ptymini](https://pypi.org/project/ptymini/), so a step that asks
-for a password gets one: `write(data)` sends keystrokes and `resize(cols, rows)` follows the
-window. `subscribe()` hands you a queue of terminal frames primed with everything that already
-scrolled past, so a viewer that joins in the middle of a release sees the whole run.
+## Plan storage
 
-Where the project is a uv project, steps go through `uv run`, which syncs the lock first — so a
-venv that has drifted is repaired rather than failing halfway through with an import error.
-
-## Where things are written
-
-Nothing is written outside the directory you name:
+Plans are written only below the project directory.
 
 ``` python
-Release(root, dir='.pullup')     # the default
-Release(root, dir='.myapp')      # your own
+custom = Pipeline(root, dir='.myapp')
+custom.save([{'id': 'show', 'cmd': 'show', 'argv': [sys.executable, '-c', 'print("saved")']}])
+custom.path.relative_to(root)
 ```
 
-## The other pipelines
+    Path('.myapp/pipeline.json')
 
-[`Deploy`](https://vedicreader.github.io/pullup/deploy.html#deploy) and [`Drive`](https://vedicreader.github.io/pullup/drive.html#drive) are the same object with different defaults. [`Deploy`](https://vedicreader.github.io/pullup/deploy.html#deploy) knows the deploy
-settings schema and generates the workflow that runs it. [`Drive`](https://vedicreader.github.io/pullup/drive.html#drive) is the deployment written out as
-library calls you can run one at a time — build the image, wrap it in Caddy, open a tunnel, add a
-hostname — each carrying the code it would run, what it needs first, and what it produces, so you
-can read it before you run it.
+## Deployment pipelines
+
+[`Deploy`](https://vedicreader.github.io/pullup/deploy.html#deploy) runs a project’s deployment script. [`Drive`](https://vedicreader.github.io/pullup/drive.html#drive) exposes each operation as a library call.
+
+``` python
+Deploy(root).state()['kind'], Drive(root).state()['kind']
+```
+
+    ('deploy', 'drive')
 
 ## Workflows
 
-``` python
-from pullup import Workflows, levels
-
-w = Workflows('~/code/myrepo')
-w.parsed()               # every workflow: triggers, jobs, and the rows to draw them in
-w.status()               # whether the GitHub half is usable, and what is missing if not
-w.runs(limit=20)         # recent runs, newest first
-w.dispatch('ci.yml')     # start one; GitHub refuses unless it declares workflow_dispatch
-```
-
-`levels(jobs)` arranges jobs into rows: everything that can start now, then what follows, by
-longest path. A job that needs one the workflow never defines still gets a row, and so does a
-cycle — a workflow you cannot look at is worse than one drawn oddly.
-
-Reading a workflow needs nothing but pullup. Where gheasy is installed its parser is used instead,
-so a file gheasy wrote round-trips through the parser it was written with.
-
-## Secrets and the environment
+Local workflow inspection needs no GitHub credentials.
 
 ``` python
-from pullup import EnvStore
-
-env = EnvStore()                 # through dockeasy: keychain first, then the env file
-env.get('GITHUB_TOKEN')
-env.values(['GITHUB_TOKEN', 'TWINE_PASSWORD'])
+workflow_dir = root/'.github'/'workflows'
+workflow_dir.mkdir(parents=True)
+(workflow_dir/'ci.yml').write_text('''name: CI
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: pytest
+''')
+workflows = Workflows(root)
+[(row['name'], [job['id'] for job in row['jobs']]) for row in workflows.parsed()]
 ```
 
-A pipeline takes one as `env=` and puts what it holds into each step’s environment. [`venv_env`](https://vedicreader.github.io/pullup/env.html#venv_env)
-builds that environment from a project’s interpreter, and strips a frozen host’s `PYTHONHOME` and
-`PYTHONPATH` on the way — a child that keeps them imports the bundle’s standard library under
-another interpreter and dies somewhere that names nothing to do with the cause.
+    [('CI', ['test'])]
 
-## Which of your packages raised
+## Environment
+
+A pipeline injects required values into the child without changing the parent environment.
 
 ``` python
-from pullup import blame
+class Values:
+    def get(self, key, secret=True): return 'demo-token' if key == 'DEMO_TOKEN' else ''
+    def values(self, keys): return {key: self.get(key) for key in keys if self.get(key)}
 
-blame(r.tail(400), checkouts=['~/code/gheasy'], family=['gheasy', 'nbdev'])
+with_values = Pipeline(root, env=Values(), dir='.env-demo')
+with_values.save([{'id': 'env', 'cmd': 'read environment', 'needs': ['DEMO_TOKEN'],
+                   'argv': [sys.executable, '-c', 'import os; print(os.environ["DEMO_TOKEN"])']}])
+await with_values.start()
+with_values.tail().splitlines()[-2:]
 ```
 
-The deepest frame belonging to one of your own packages, the error line, and where to open it —
-preferring your checkout over the copy in site-packages, because editing site-packages is editing
-something the next install discards.
+    ['', '❯ read environment']
 
-## Servers and DNS
+## Package errors
 
-[`Infra`](https://vedicreader.github.io/pullup/infra.html#infra) reaches Hetzner through vpseasy and Cloudflare through cfeasy, using the tokens the
-environment store holds.
+[`blame`](https://vedicreader.github.io/pullup/stack.html#blame) identifies the deepest selected-package frame.
+
+``` python
+trace = '''Traceback (most recent call last):
+  File "/tmp/pullup/demo.py", line 7, in release
+    raise RuntimeError("stopped")
+RuntimeError: stopped
+'''
+blame(trace, family=['pullup'])
+```
+
+    {'package': 'pullup',
+     'file': '/tmp/pullup/demo.py',
+     'line': 7,
+     'fn': 'release',
+     'error': 'RuntimeError: stopped',
+     'open': '/tmp/pullup/demo.py',
+     'checkout': '',
+     'version': '0.0.4'}
+
+## Infrastructure
+
+[`Infra.status`](https://vedicreader.github.io/pullup/infra.html#infra.status) reports provider and token availability without making a request.
+
+``` python
+infra = Infra(env={})
+infra.status()
+```
+
+    {'vpseasy': True,
+     'cfeasy': True,
+     'hcloud_token': True,
+     'cf_token': False,
+     'keys': ['HCLOUD_TOKEN', 'CLOUDFLARE_API_TOKEN']}

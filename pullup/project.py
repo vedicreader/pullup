@@ -129,30 +129,25 @@ APP_STEPS = [
         'Upload what dist/ holds to the release this version just tagged.', ['GITHUB_TOKEN']),
 ]
 
-#: Every flow, by the name `release_flow` answers with. Add one and `default_steps` can reach it.
 FLOWS = {'nbdev': NBDEV_STEPS, 'fastship': FASTSHIP_STEPS, 'plain': PLAIN_STEPS,
          'maturin': MATURIN_STEPS, 'crate': CRATE_STEPS}
 
 # %% ../nbs/01_project.ipynb #ad092499
 def release_flow(root):
-    """Which release flow this project uses.
-
-    Rust is asked before fastship, because a maturin crate has a `pyproject.toml` too and the
-    fastship flow would try to `ship-pypi` a wheel that only the runners can build.
-    """
+    "Return the project's release flow."
     if nbdev_project(root): return 'nbdev'
     if maturin_project(root): return 'maturin'
     if rust_project(root): return 'crate'
     return 'fastship' if fastship_project(root) else 'plain'
 
 def _with_app(steps):
-    "The app bundle and its upload, after the last step that publishes and before any that bumps."
+    "Insert app steps after publishing and before version bumps."
     at = [i for i, s in enumerate(steps) if s.id in ('gh', 'pypi')]
     i = max(at) + 1 if at else len(steps)
     return [*steps[:i], *APP_STEPS, *steps[i:]]
 
 def default_steps(root, flows=None):
-    "The steps this kind of project is released by, with the desktop bundle where there is one."
+    "Return the project's release steps, including app packaging."
     steps = list((flows or FLOWS)[release_flow(root)])
     return _with_app(steps) if app_project(root) else steps
 

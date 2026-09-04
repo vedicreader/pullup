@@ -14,9 +14,7 @@ from .project import Step, default_steps, release_flow, app_project
 __all__ = ['SCROLLBACK', 'DIR', 'PipelineError', 'resolve_script', 'uv_argv', 'Pipeline', 'Release']
 
 # %% ../nbs/02_pipeline.ipynb #18ee2a74
-#: Bytes of transcript one pipeline keeps. A viewer that joins late is primed with this much.
 SCROLLBACK = 200_000
-#: Where a pipeline's plan is written, relative to the project. A caller may name another.
 DIR = '.pullup'
 
 class PipelineError(RuntimeError): pass
@@ -34,18 +32,11 @@ def resolve_script(argv, python=None, env=None):
     return argv
 
 def uv_argv(root, argv):
-    """`argv` through `uv run` where uv owns the project, else None.
-
-    uv syncs the lock before it runs anything, so a venv that has drifted is repaired rather than
-    failing halfway through with an import error.
-    """
+    "Run `argv` through uv when `root` has a uv lockfile."
     root = Path(root)
     if not (root/'uv.lock').exists(): return None
     exe = which('uv')
     if not exe: return None
-    # Spelled the way the project spells it. uv runs the project's own script where there is one
-    # and falls through to PATH where there is not, and PATH is where another interpreter's
-    # differently-spelled copy of the same tool is waiting.
     name = argv[0]
     bindir = root/'.venv'/'bin'
     hit = first(n for n in (name, name.replace('_', '-'), name.replace('-', '_'))
@@ -197,12 +188,9 @@ class Pipeline:
     async def _drain(self, step):
         "Pump the step's pty to every viewer, record how it ended, then decide what happens next."
         pty = self.pty
-        # from_start, because the child can write and exit before this task first runs. The
-        # ring is this step's own, so replaying it from its first byte duplicates nothing.
         try:
             async for chunk in pty.attach(from_start=True): self._broadcast(chunk)
-        except Exception as e:
-            self._broadcast(f'\r\n\x1b[31m{type(e).__name__}: {e}\x1b[0m\r\n'.encode())
+        except Exception as e: self._broadcast(f'\r\n\x1b[31m{type(e).__name__}: {e}\x1b[0m\r\n'.encode())
         code = pty.exit_code
         ok = code == 0
         self.results[step.id] = {'status': 'passed' if ok else 'failed', 'code': code,

@@ -4,7 +4,7 @@ project:
 website:
   title: "pullup"
   site-url: "https://vedicreader.github.io/pullup"
-  description: "get a project from your laptop to running somewhere: what it is, the steps that release it, the workflows that do it on a server, and the machines underneath"
+  description: "build, release, and deploy projects"
   repo-branch: main
   repo-url: "https://github.com/vedicreader/pullup"
 

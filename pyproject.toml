@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "pullup"
 dynamic = ["version"]
-description = "get a project from your laptop to running somewhere: what it is, the steps that release it, the workflows that do it on a server, and the machines underneath"
+description = "build, release, and deploy projects"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "Apache-2.0"}

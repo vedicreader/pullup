@@ -16,7 +16,6 @@ from pathlib import Path
 from fastcore.basics import first, ifnone
 
 # %% ../nbs/07_stack.ipynb #62dff432
-#: The packages a blame report looks for by default. A caller with its own family passes `family=`.
 FAMILY = ['gheasy', 'dockeasy', 'vpseasy', 'cfeasy', 'dhrishti', 'nbdev', 'fastship', 'pullup']
 
 # %% ../nbs/07_stack.ipynb #11771675

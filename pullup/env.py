@@ -16,37 +16,23 @@ class EnvError(RuntimeError): pass
 
 # %% ../nbs/00_env.ipynb #9d27ac2f
 def strip_bundle(env, frozen=None):
-    """`env` without a frozen host's interpreter redirection, unchanged where there is none.
-
-    py2app and py2exe point `PYTHONHOME` and `PYTHONPATH` at the bundle so its own helper starts.
-    A child that keeps them imports the bundle's standard library under another interpreter, which
-    fails somewhere unrelated: `nbdev-test` run from a bundled app died inside `linecache` before
-    reporting a single notebook. Outside a bundle this returns what it was given, untouched.
-    """
+    "Return `env` without frozen-host interpreter redirection."
     if not (getattr(sys, 'frozen', False) if frozen is None else frozen): return env
     for name in BUNDLE_ONLY: env.pop(name, None)
     env['PYTHONUTF8'] = '1'
     return env
 
 def clean_env():
-    "This process's environment, safe to hand to a child."
+    "Return this process's environment without bundle variables."
     return strip_bundle(os.environ.copy(), frozen=True)
 
 # %% ../nbs/00_env.ipynb #4b56c811
 def venv_env(python=None, env=None):
-    """`env` (this process's, by default) with `python`'s virtual environment in front of it.
-
-    `python` is a path to an interpreter, which is how a caller says "run this project's commands
-    in this project's environment". Passing None claims nothing about the environment beyond the
-    bundle hygiene above.
-    """
+    "Return `env` with `python`'s virtual environment prepended to `PATH`; None leaves the environment unchanged."
     env = strip_bundle(dict(os.environ if env is None else env))
     if not python: return env
     bindir = str(Path(python).parent)
     env['VIRTUAL_ENV'] = str(Path(bindir).parent)
-    # Not `UV_PROJECT_ENVIRONMENT`. It is read wherever the process ends up rather than where it
-    # started, so a `uv sync` run in another checkout syncs that project's lock into this venv and
-    # prunes everything the lock does not name. uv finds the right environment from the directory.
     env.pop('UV_PROJECT_ENVIRONMENT', None)
     env['PATH'] = bindir + os.pathsep + env.get('PATH', '')
     env.pop('PYTHONHOME', None)

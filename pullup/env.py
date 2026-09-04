@@ -53,10 +53,10 @@ def venv_env(python=None, env=None):
     return env
 
 # %% ../nbs/00_env.ipynb #54dbd62c
-_extra = 'pullup[cloud]'
+_extra = 'pullup'
 
 def use_extra(name):
-    "Name the extra every message about the cloud half tells the reader to install."
+    "Name the package every message about the cloud half tells the reader to install."
     global _extra
     _extra = str(name)
 

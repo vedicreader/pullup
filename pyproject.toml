@@ -12,9 +12,9 @@ license = {text = "Apache-2.0"}
 authors = [{name = "Karthik Rajgopal", email = "karthik.rajgopal@hotmail.com"}]
 keywords = ['nbdev', 'jupyter', 'notebook', 'python']
 classifiers = ["Natural Language :: English", "Intended Audience :: Developers", "Development Status :: 3 - Alpha", "Programming Language :: Python :: 3", "Programming Language :: Python :: 3 :: Only"]
-# `ptymini` runs each step on a pty and keeps a ring of its output, which is what makes a step's
-# transcript replayable for a viewer that joins late.
-dependencies = ['fastcore>=1.8.17', 'ptymini>=0.0.5', 'pyyaml>=6.0']
+dependencies = ['fastcore>=1.8.17', 'ptymini>=0.0.5', 'pyyaml>=6.0', 'dockeasy>=0.0.5',
+                'gheasy>=0.0.10', 'vpseasy>=0.0.18', 'cfeasy>=0.0.4', 'python-dotenv>=1.0.0',
+                'keyring>=25.0.0']
 
 [project.urls]
 Repository = "https://github.com/vedicreader/pullup"
@@ -22,13 +22,6 @@ Documentation = "https://vedicreader.github.io/pullup"
 
 [project.entry-points.nbdev]
 pullup = "pullup._modidx:d"
-
-[project.optional-dependencies]
-# The cloud half is optional and imported where it is used: a pipeline that runs `pytest` needs
-# none of it, and saying so keeps the base install small.
-cloud = ['dockeasy>=0.0.5', 'gheasy>=0.0.10', 'vpseasy>=0.0.18', 'cfeasy>=0.0.4',
-         'python-dotenv>=1.0.0', 'keyring>=25.0.0']
-dev = ['pytest>=8.0.0', 'pytest-asyncio>=1.0.0', 'nbdev>=3.3.11', 'pullup[cloud]']
 
 [tool.setuptools.dynamic]
 version = {attr = "pullup.__version__"}
@@ -43,3 +36,10 @@ doc_baseurl = "/pullup"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+
+[dependency-groups]
+dev = ['pytest>=8.0.0', 'pytest-asyncio>=1.0.0', 'nbdev>=3.3.11']
+
+[tool.uv.sources]
+# The checkout beside this one, until gheasy 0.0.10 is on PyPI; drop it to take the published one.
+gheasy = { path = "../gheasy", editable = true }

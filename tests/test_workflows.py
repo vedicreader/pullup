@@ -57,3 +57,22 @@ def test_broken_yaml_is_an_error_on_the_row_not_an_exception(tmp_path):
     (d/'bad.yml').write_text('name: [unclosed\n')
     row = Workflows(tmp_path).parse(d/'bad.yml')
     assert row['error'] and row['jobs'] == []
+
+def test_the_nbdev_job_only_runs_commands_and_flags_the_installed_nbdev_has():
+    "nbdev 3 ships hyphenated scripts only, and `nbdev-clean` has no `--check_all`."
+    import shlex, shutil, subprocess, sys
+    from pathlib import Path
+    from gheasy.workflow import Workflow
+    import yaml
+    from pullup.wfbuild import nbdev_job
+    wfb = Workflow('ci'); nbdev_job(wfb)
+    runs = [l for s in yaml.safe_load(wfb.build().to_yaml())['jobs']['test']['steps'] for l in (s.get('run') or '').splitlines()]
+    cmds = [shlex.split(l)[2:] for l in runs if l.startswith('uv run nbdev')]
+    assert cmds, runs
+    for c in cmds:
+        exe = shutil.which(c[0], path=str(Path(sys.executable).parent))
+        assert exe, f'no {c[0]} script'
+        hlp = subprocess.run([exe, '--help'], capture_output=True, text=True).stdout
+        for f in c[1:]:
+            if f.startswith('--'): assert f in hlp, f'{c[0]} has no {f}'
+    assert any(l.startswith('git diff --exit-code') for l in runs), 'the clean step must fail on a dirty notebook'

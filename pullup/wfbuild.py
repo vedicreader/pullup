@@ -163,11 +163,11 @@ def fastship_job(wfb, job_id='release', needs=None):
 
 # %% ../nbs/06_wfbuild.ipynb #b54bdafb
 def nbdev_job(wfb, job_id='test', needs=None):
-    "Add nbdev's CI job: install, run `nbdev_test`, then the notebook-clean step."
+    "Add nbdev's CI job: install, run `nbdev-test`, then fail if `nbdev-clean` changes a notebook."
     (wfb.job(job_id, needs=needs).runs_on('ubuntu-latest')
         .checkout().end_step().setup_uv().end_step().uv_install().end_step()
-        .uv_run('nbdev_test').end_step()
-        .step('Notebooks are clean').run('uv run nbdev_clean --check_all').end_job())
+        .uv_run('nbdev-test').end_step()
+        .step('Notebooks are clean').run('uv run nbdev-clean\ngit diff --exit-code').end_job())
 
 # %% ../nbs/06_wfbuild.ipynb #b6e060a8
 def _run_job(wfb, job_id, opts):

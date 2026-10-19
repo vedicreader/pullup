@@ -1,4 +1,4 @@
-__version__ = "0.0.8"
+__version__ = "0.0.9"
 
 # The names a caller reaches for. The modules stay importable for everything else.
 from .env import EnvError, EnvStore, venv_env

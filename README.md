@@ -17,7 +17,7 @@ This also installs gheasy, dockeasy, vpseasy and cfeasy. None of them is importe
 
 ## What kind of project is this
 
-A release flow is the ordered list of commands that publishes one kind of project. An nbdev library is released with `nbdev_prepare`, `nbdev_bump_version`, `nbdev_release_gh` and `nbdev_pypi`. A plain Python package and a Rust crate each have a different list. [`Project`](https://vedicreader.github.io/pullup/project.html#project) looks at the files in a folder, picks the flow that fits, and returns its steps. The folder here holds only a `pyproject.toml` with a `[tool.nbdev]` table, so it is an nbdev project:
+A release flow is the ordered list of commands that publishes one kind of project. An nbdev library is released with `nbdev-prepare`, `nbdev-bump-version`, `nbdev-release-gh` and `nbdev-pypi`. A plain Python package and a Rust crate each have a different list. [`Project`](https://vedicreader.github.io/pullup/project.html#project) looks at the files in a folder, picks the flow that fits, and returns its steps. The folder here holds only a `pyproject.toml` with a `[tool.nbdev]` table, so it is an nbdev project:
 
 ``` python
 project = Project(root)

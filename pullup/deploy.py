@@ -88,8 +88,8 @@ def _load_env():
     return dict(os.environ) | (parse_env(fn=str(envf)) if envf.exists() else {{}})
 
 def env2push():
-    'Schema defaults overlaid with whatever is actually set locally.'
-    return ENV_KEYS | filter_keys(_load_env(), in_(ENV_KEYS))
+    'Schema defaults overlaid with the local values, leaving out keys with no value so GitHub never stores "None".'
+    return {{k: v for k, v in (ENV_KEYS | filter_keys(_load_env(), in_(ENV_KEYS))).items() if v not in (None, 'None', '')}}
 
 def init_gheasy():
     cfg = GheasyConfig.load(ROOT)
@@ -181,13 +181,14 @@ runs whatever this file says.
     python deploy.py compose
     python deploy.py deploy
     python deploy.py status
-    python deploy.py nuke
+    python deploy.py rollback [tag]
+    python deploy.py nuke [--tunnel]
 """
 import os, sys, secrets
 from fastcore.all import Path
 from dockeasy import detect_app, env_set, env_get
 from cfeasy import CF
-from vpseasy import caddy_stack, hetzner_deploy, Hetzner
+from vpseasy import caddy_stack, hetzner_deploy, Hetzner, wait_http, rollback as vps_rollback
 
 root = Path(__file__).resolve().parent
 app, domain, subdomain = {app!r}, {domain!r}, {subdomain!r}
@@ -269,6 +270,22 @@ def deploy(force=None):
     env_set('HETZNER_IP', r.ip, path=root/'.env')
     if r.key: env_set('HETZNER_KEY', r.key, path=root/'.env')
     print(f'deployed: https://{{host}} at {{r.ip}}')
+    after_deploy(cf)
+
+def after_deploy(cf):
+    \'\'\'Wait until the site answers, then purge Cloudflare's cache for the host so visitors get the new pages.
+    vpseasy's deploy already keeps the replaced image for `rollback` and prunes dangling images.
+    Empty this function to skip both steps.\'\'\'
+    if not wait_http(f'https://{{host}}/', ua=f'{{app}}-deploy', tries=20): return print('site not answering yet; cache not purged')
+    try: cf.purge(cf.zone_id(domain), prefixes=[f'{{host}}/'], fallback_all=False); print('cache purged:', host)
+    except Exception as e: print(f'cache not purged: {{e}}')
+
+def rollback(to=None):
+    "Run the image before the last deploy, or the kept image tagged `to`."
+    ip = env_get('HETZNER_IP', path=root/'.env')
+    if not ip: return print('no server yet')
+    vps_rollback(ip, to, path=srv, user=env_get('SERVER_USER', path=root/'.env', default='deploy'),
+                 key=env_get('HETZNER_KEY', path=root/'.env', default=None))
 
 def status():
     "Which servers exist on this token, and which tunnels."
@@ -278,14 +295,17 @@ def status():
     for t in cf.tunnels(): print(f'tunnel {{t.get("name","")!r:22}} {{t.get("id","")}}')
     print(f'this project deploys as {{name}} -> {{host}}')
 
-def nuke():
-    "Delete the server and the tunnel. Irreversible, so it asks for a token you have to read."
+def nuke(tunnel=False):
+    \'\'\'Delete the server, and with `tunnel` the tunnel too. Irreversible, so it asks for a token you have to read.
+    The tunnel serves the site from whichever box runs its connector, so after a move to a new server keep it.\'\'\'
     typ = secrets.token_urlsafe(8)
-    if input(f'This deletes the server and the tunnel. Type {{typ}} to proceed: ') != typ:
+    what = 'the server and the tunnel' if tunnel else 'the server'
+    if input(f'This deletes {{what}}. Type {{typ}} to proceed: ') != typ:
         return print('aborted')
     name = env_get('SERVER_NAME', path=root/'.env', default=app)
     Hetzner().delete(name)
     print(f'server {{name}} deleted')
+    if not tunnel: return print('tunnel kept (python deploy.py nuke --tunnel deletes it)')
     try:
         cf = CF(token=env_get('CLOUDFLARE_API_TOKEN', path=root/'.env'))
         cf.delete_tunnel(cf.tunnel_id(tunnel_name))
@@ -299,8 +319,9 @@ if __name__ == '__main__':
     elif cmd == 'env': mk_env()
     elif cmd == 'deploy': deploy(force=args[1] if len(args) > 1 else None)
     elif cmd == 'status': status()
-    elif cmd == 'nuke': nuke()
-    else: print('usage: deploy.py env | compose | deploy | status | nuke')
+    elif cmd == 'rollback': rollback(args[1] if len(args) > 1 else None)
+    elif cmd == 'nuke': nuke(tunnel='--tunnel' in args)
+    else: print('usage: deploy.py env | compose | deploy | status | rollback [tag] | nuke [--tunnel]')
 '''
 
 # %% ../nbs/03_deploy.ipynb #d11ca8b9
@@ -313,9 +334,9 @@ class Deploy(Pipeline):
     def target(self):
         "Where this deploy goes, which secrets are still unset, and which generated files exist."
         store = self.env if isinstance(self.env, EnvStore) else EnvStore()
-        def value(key, default=''): return env_value(store, key, default)
+        def value(key, default=''): return env_value(store, key) or env_value(store, key.lower(), default)
         missing = [k for k, v in DEPLOY_KEYS.items()
-                   if v is None and not env_value(store, k, secret=True)]
+                   if v is None and not (env_value(store, k, secret=True) or env_value(store, k.lower(), secret=True))]
         return {'app': value('APP') or self.root.name, 'domain': value('DOMAIN'),
             'server': value('SERVER_NAME'), 'user': value('SERVER_USER', 'deploy'),
             'port': value('PORT', '5001'), 'missing': missing,

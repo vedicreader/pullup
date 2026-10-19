@@ -64,13 +64,13 @@ def app_project(root):
 
 # %% ../nbs/01_project.ipynb #3b3306e1
 NBDEV_STEPS = [
-    Step('prepare', 'nbdev_prepare', 'nbdev_prepare',
+    Step('prepare', 'nbdev-prepare', 'nbdev-prepare',
         'Export the notebooks, run the tests, clean the metadata, rebuild the README.'),
-    Step('bump', 'bump version', 'nbdev_bump_version',
+    Step('bump', 'bump version', 'nbdev-bump-version',
         'Raise the version in settings.ini and commit it.'),
-    Step('gh', 'GitHub release', 'nbdev_release_gh',
+    Step('gh', 'GitHub release', 'nbdev-release-gh',
         'Tag the version and create the GitHub release from CHANGELOG.', ['GITHUB_TOKEN']),
-    Step('pypi', 'PyPI release', 'nbdev_pypi',
+    Step('pypi', 'PyPI release', 'nbdev-pypi',
         'Build the wheel and upload it to PyPI.', ['TWINE_USERNAME', 'TWINE_PASSWORD']),
 ]
 

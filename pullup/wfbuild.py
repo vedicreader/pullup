@@ -72,9 +72,9 @@ PRESETS = [
             'doc': 'Defaults to the project name.'}]},
     {'id': 'node', 'job': 'frontend', 'name': 'Node build', 'doc': 'npm ci, build, test.',
         'options': []},
-    {'id': 'rust', 'job': 'build', 'name': 'Rust build', 'doc': 'cargo build, test, clippy.',
+    {'id': 'rust', 'job': 'rust', 'name': 'Rust build', 'doc': 'cargo build, test, clippy.',
         'options': []},
-    {'id': 'go', 'job': 'build', 'name': 'Go build', 'doc': 'go build, test, vet.', 'options': []},
+    {'id': 'go', 'job': 'go', 'name': 'Go build', 'doc': 'go build, test, vet.', 'options': []},
     {'id': 'deploy', 'job': 'deploy', 'name': 'Deploy to a VPS',
         'doc': 'Every key in env_schema as a secret or a variable, the deploy key, then your '
         'deploy command. The shape lego uses.',

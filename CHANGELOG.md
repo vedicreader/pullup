@@ -2,6 +2,11 @@
 
 <!-- do not remove -->
 
+## 0.0.7
+
+- `nbdev_job` runs `nbdev-test`, then `nbdev-clean` and `git diff --exit-code`. It ran `nbdev_test` and
+  `nbdev_clean --check_all`, which nbdev 3 does not have, so every generated workflow failed.
+
 ## 0.0.6
 release
 

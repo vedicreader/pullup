@@ -16,19 +16,19 @@ class EnvError(RuntimeError): pass
 
 # %% ../nbs/00_env.ipynb #9d27ac2f
 def strip_bundle(env, frozen=None):
-    "Return `env` without frozen-host interpreter redirection."
+    "Remove the frozen-app interpreter variables from `env` when running frozen, and return it."
     if not (getattr(sys, 'frozen', False) if frozen is None else frozen): return env
     for name in BUNDLE_ONLY: env.pop(name, None)
     env['PYTHONUTF8'] = '1'
     return env
 
 def clean_env():
-    "Return this process's environment without bundle variables."
+    "A copy of this process's environment with the frozen-app interpreter variables removed."
     return strip_bundle(os.environ.copy(), frozen=True)
 
 # %% ../nbs/00_env.ipynb #4b56c811
 def venv_env(python=None, env=None):
-    "Return `env` with `python`'s virtual environment prepended to `PATH`; None leaves the environment unchanged."
+    "A copy of `env` that runs commands in the virtual environment of `python`, or unchanged when `python` is None."
     env = strip_bundle(dict(os.environ if env is None else env))
     if not python: return env
     bindir = str(Path(python).parent)
@@ -42,13 +42,17 @@ def venv_env(python=None, env=None):
 _extra = 'pullup'
 
 def use_extra(name):
-    "Name the package every message about the cloud half tells the reader to install."
+    "Set the package name that missing-library errors tell the reader to install."
     global _extra
     _extra = str(name)
 
-def extra(): return _extra
+def extra():
+    "The package name that missing-library errors tell the reader to install."
+    return _extra
 
-def needs_extra(what): return f'{what}: pip install "{_extra}"'
+def needs_extra(what):
+    "An error message for `what` that ends with the command that installs the missing library."
+    return f'{what}: pip install "{_extra}"'
 
 # %% ../nbs/00_env.ipynb #e34073db
 def _dockeasy():
@@ -76,16 +80,16 @@ def _call(fn, *args, **kwargs):
 
 # %% ../nbs/00_env.ipynb #9937a32a
 class EnvStore:
-    "The environment keys one project cares about, read and written through dockeasy."
+    "Read and write one project's tokens and settings through dockeasy's keychain and env file."
     def __init__(self, service='fastops', path=None): self.service, self.path = service, path
     def get(self, key, secret=True):
-        "One value, from the keychain or the env file, falling back to this process's environment."
+        "One value from the keychain, the environment or the env file, or `''` when none has it."
         env_get, _set, secret_get, _sset = _dockeasy()
         stored = (_call(secret_get, key, service=self.service, path=self.path) if secret
                   else _call(env_get, key, path=self.path))
         return stored or os.environ.get(key) or ''
     def set(self, key, value, secret=True):
-        "Store one value. A secret goes to the keychain as well as the file; a variable does not."
+        "Store one value: a secret in the keychain and the env file, anything else in the env file only."
         key = str(key or '').strip()
         if not key: raise EnvError('a key is required')
         if not str(value): raise EnvError(f'{key} needs a value')
@@ -94,7 +98,7 @@ class EnvStore:
         else: _call(env_set, key, str(value), path=self.path)
         return {'key': key, 'secret': bool(secret)}
     def unset(self, key):
-        "Remove a value from every place `set` put it. Says which places actually held one."
+        "Remove a value from the keychain, the env file and `os.environ`, and say which of the first two held it."
         from dockeasy.core import _FASTOPS_ENV
         from dotenv import unset_key
         key, gone = str(key), []
@@ -112,7 +116,7 @@ class EnvStore:
         os.environ.pop(key, None)
         return {'key': key, 'removed': gone}
     def values(self, keys, secret=True):
-        "Every key that has a value, as a dict. A key with none is absent rather than empty."
+        "The keys that have a value, as a dict; keys with no value are left out."
         out = {}
         for k in keys:
             try: v = self.get(k, secret=secret)
@@ -122,6 +126,6 @@ class EnvStore:
 
 # %% ../nbs/00_env.ipynb #55636ab5
 def env_value(store, key, default='', secret=False):
-    "One value out of an environment store, or `default` when it is unset or unreadable."
+    "One value from an environment store, or `default` when it is unset or the store raises."
     try: return store.get(key, secret=secret) or default
     except Exception: return default

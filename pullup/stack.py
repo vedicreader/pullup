@@ -55,7 +55,7 @@ def _roots(checkouts): return [Path(c).expanduser().resolve() for c in checkouts
 
 # %% ../nbs/07_stack.ipynb #dbaeb491
 def checkout_for(name, checkouts):
-    "The open checkout that *is* this package, matched by `<root>/<name>/__init__.py`, not repo name."
+    "The folder in `checkouts` that holds package `name`, found by its `__init__.py` rather than the folder name."
     for root in _roots(checkouts):
         for inner in (root/name, root/'src'/name):
             if (inner/'__init__.py').exists(): return str(root)
@@ -74,7 +74,7 @@ def _row(name, roots):
 
 # %% ../nbs/07_stack.ipynb #f78bc3ef
 def survey(family=(), checkouts=()):
-    "One row each: installed, version, the resolved copy, and whether a checkout is shadowed."
+    "One row per family package: installed, version, the copy an import resolves to, and whether a checkout is shadowed."
     roots = _roots(checkouts)
     return [_row(name, roots) for name in (list(family) or FAMILY)]
 
@@ -105,7 +105,7 @@ def _is_error(line):
 
 # %% ../nbs/07_stack.ipynb #2bf1a3dd
 def blame(text, checkouts=(), family=None):
-    "Which package raised (the deepest family frame) and where to open it, preferring a checkout."
+    "Which family package raised, from the deepest family frame, and the file to open, preferring your checkout."
     text = str(text or '')
     names = list(family or ()) or FAMILY
     roots = _roots(checkouts)

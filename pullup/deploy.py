@@ -29,11 +29,13 @@ DeployError = PipelineError
 _generator = 'Leela'
 
 def use_generator(name):
-    "Name the tool the generated `setup.py` and `deploy.py` say wrote them."
+    "Set the tool name that generated `setup.py` and `deploy.py` files say wrote them."
     global _generator
     _generator = str(name)
 
-def generator(): return _generator
+def generator():
+    "The tool name that generated scripts say wrote them."
+    return _generator
 
 # %% ../nbs/03_deploy.ipynb #dbcb05a3
 DEPLOY_KEYS = {
@@ -55,7 +57,7 @@ DEPLOY_STEPS = [
 
 # %% ../nbs/03_deploy.ipynb #d6728ee1
 def setup_template(app, domain, subdomain='', port=5001, lfs=True):
-    "lego's `setup.py`: the one-shot half of the pattern, with `ENV_KEYS` as its single source."
+    "The text of a one-time `setup.py` that prepares a project for deploying the lego way."
     host = f'{subdomain}.{domain}' if subdomain else domain
     patterns = "['*.png', '*.jpg', '*.jpeg', '*.webp', '*.ico', '*.mp3', '*.wav']"
     return f'''"""One-shot setup for {app}: gheasy schema, LFS, .env, the deploy workflow, secrets.
@@ -164,7 +166,7 @@ if __name__ == '__main__':
 
 # %% ../nbs/03_deploy.ipynb #695a8160
 def deploy_template(app, domain, subdomain='', port=5001, second_host=''):
-    "lego's `deploy.py` in full, with this project's names in it. `second_host` is lego's apex."
+    "The text of a `deploy.py` that builds, tunnels and deploys the app; `second_host` adds another hostname."
     host = f'{subdomain}.{domain}' if subdomain else domain
     tunnel = f'{subdomain or app}_{domain}'
     second = f'''
@@ -303,13 +305,13 @@ if __name__ == '__main__':
 
 # %% ../nbs/03_deploy.ipynb #d11ca8b9
 class Deploy(Pipeline):
-    "The deploy pipeline: the project's own `deploy.py`, one subcommand per step."
+    "The deploy pipeline, one step per subcommand of the project's `deploy.py`."
     FILE = DEPLOY_FILE
     KIND = 'deploy'
     @staticmethod
     def defaults(root): return list(DEPLOY_STEPS)
     def target(self):
-        "Where this deploy goes and what it is still missing, from the store the steps will read."
+        "Where this deploy goes, which secrets are still unset, and which generated files exist."
         store = self.env if isinstance(self.env, EnvStore) else EnvStore()
         def value(key, default=''): return env_value(store, key, default)
         missing = [k for k, v in DEPLOY_KEYS.items()
@@ -325,7 +327,7 @@ class Deploy(Pipeline):
             'keys': {k: (v is None) for k, v in DEPLOY_KEYS.items()}}
     def state(self): return super().state() | {'target': self.target()}
     def scaffold(self, domain='', subdomain='', app='', force=False, second_host=''):
-        "Write lego's pattern out: the one-shot `setup.py` and the `deploy.py` CI runs on every push."
+        "Write `deploy.py` and `setup.py`, record the deploy keys, add the deploy workflow, and return the paths written."
         domain = str(domain or '').strip()
         if not domain: raise DeployError('a domain is required — the host this app answers on')
         app = str(app or '').strip() or self.root.name

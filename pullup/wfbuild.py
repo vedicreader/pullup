@@ -18,11 +18,13 @@ SPEC_DIR = 'workflows'
 _spec_dir = SPEC_DIR
 
 def use_spec_dir(dir):
-    "Name the directory a spec is kept in, relative to the repository root."
+    "Set the directory, relative to the repository root, where workflow specs are kept."
     global _spec_dir
     _spec_dir = str(dir)
 
-def spec_dir(): return _spec_dir
+def spec_dir():
+    "The directory, relative to the repository root, where workflow specs are kept."
+    return _spec_dir
 
 # %% ../nbs/06_wfbuild.ipynb #e750e281
 TRIGGERS = [
@@ -93,7 +95,7 @@ PRESETS = [
 
 # %% ../nbs/06_wfbuild.ipynb #02451344
 def preset_rows():
-    "The vocabulary, as the panel renders it."
+    "The presets and triggers a workflow-builder form offers."
     return dict(presets=PRESETS, triggers=TRIGGERS)
 
 # %% ../nbs/06_wfbuild.ipynb #f457da77
@@ -113,7 +115,7 @@ def _branches(value):
 
 # %% ../nbs/06_wfbuild.ipynb #d2f764fe
 def _triggers(wfb, on):
-    "Apply the trigger part of a spec, whose one shape gheasy renders into `on:`'s three."
+    "Apply the `on` part of a spec to a gheasy workflow, adding `workflow_dispatch` when nothing else is chosen."
     used = False
     push, tags = on.get('push'), on.get('tags')
     if push not in (None, False) or tags not in (None, False):
@@ -138,7 +140,7 @@ def _triggers(wfb, on):
 
 # %% ../nbs/06_wfbuild.ipynb #f36279fe
 def deploy_job(wfb, job_id, opts, schema, app):
-    "lego's deploy job: the schema as `env:`, the key, then the command."
+    "Add the lego deploy job: the schema as the job's environment, the SSH key, then the deploy command."
     env = {k: (f'${{{{ secrets.{k} }}}}' if v is None else f'${{{{ vars.{k} }}}}')
         for k, v in (schema or {}).items()}
     env['DEPLOY_KEY'] = '${{ secrets.DEPLOY_KEY }}'
@@ -154,14 +156,14 @@ def deploy_job(wfb, job_id, opts, schema, app):
 
 # %% ../nbs/06_wfbuild.ipynb #3bb11aa2
 def fastship_job(wfb, job_id='release', needs=None):
-    "The release job a fastship tag push expects, from gheasy's own preset."
+    "Add gheasy's fastship release job, which runs when fastship pushes a version tag."
     if not hasattr(wfb, 'fastship_release_job'):
         raise AttributeError('this gheasy has no fastship release job: pip install -U gheasy')
     wfb.fastship_release_job(needs=needs, job_id=job_id)
 
 # %% ../nbs/06_wfbuild.ipynb #b54bdafb
 def nbdev_job(wfb, job_id='test', needs=None):
-    "nbdev's own CI job: export and test, then the clean check that is what breaks in an nbdev repo."
+    "Add nbdev's CI job: install, run `nbdev_test`, then the notebook-clean step."
     (wfb.job(job_id, needs=needs).runs_on('ubuntu-latest')
         .checkout().end_step().setup_uv().end_step().uv_install().end_step()
         .uv_run('nbdev_test').end_step()
@@ -188,7 +190,7 @@ def _adopt(wfb, job_id, needs):
 
 # %% ../nbs/06_wfbuild.ipynb #2f83440b
 def compose(spec, schema=None, app=''):
-    "A spec as YAML, built entirely with gheasy. Job ids are made unique as they are added."
+    "Turn a workflow-builder spec into YAML with gheasy, giving each job a unique id."
     from gheasy.workflow import Workflow
     spec = spec or {}
     app = str(app or spec.get('app') or 'app')
@@ -228,16 +230,18 @@ def compose(spec, schema=None, app=''):
 
 # %% ../nbs/06_wfbuild.ipynb #2e5061ea
 def spec_path(root, file, dir=None):
+    "Where the spec for workflow `file` is kept."
     return Path(root)/(dir or _spec_dir)/Path(file).with_suffix('.json')
 
 # %% ../nbs/06_wfbuild.ipynb #940d0b2a
 def load_spec(root, file, dir=None):
-    "The spec a workflow was built from, or None when it was written some other way."
+    "The spec a workflow was built from, or None when there is no readable one."
     try: return json.loads(spec_path(root, file, dir).read_text(encoding='utf-8'))
     except (OSError, ValueError): return None
 
 # %% ../nbs/06_wfbuild.ipynb #11583f6a
 def save_spec(root, file, spec, dir=None):
+    "Write the spec for workflow `file` as JSON and return its path."
     p = spec_path(root, file, dir)
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(json.dumps(spec, indent=2) + '\n', encoding='utf-8')

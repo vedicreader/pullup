@@ -50,14 +50,16 @@ def _why(what, pkg, e):
 
 # %% ../nbs/08_infra.ipynb #f5433bf9
 class Infra:
-    "Hetzner and Cloudflare, through vpseasy and cfeasy, with this project's tokens."
+    "Hetzner servers and Cloudflare tunnels, zones and DNS records, using this project's tokens."
     HCLOUD, CF_TOKEN = 'HCLOUD_TOKEN', 'CLOUDFLARE_API_TOKEN'
     def __init__(self, env=None):
         self.env = env or EnvStore()
     def token(self, key):
+        "A token from the store, else from this process's environment, else `''`."
         try: return self.env.get(key) or os.environ.get(key, '')
         except Exception: return os.environ.get(key, '')
     def status(self):
+        "Which libraries are installed and which tokens are set, without the values."
         return {'vpseasy': installed('vpseasy'), 'cfeasy': installed('cfeasy'),
                 'hcloud_token': bool(self.token(self.HCLOUD)),
                 'cf_token': bool(self.token(self.CF_TOKEN)),
@@ -78,27 +80,31 @@ class Infra:
         "Every Hetzner server on this token, as vpseasy reports them."
         return list(self._hetzner().servers())
     def delete_server(self, name):
-        "Delete one server, named. Irreversible, and the caller is expected to have asked."
+        "Delete one server by name; this cannot be undone, so ask the user first."
         name = str(name or '').strip()
         if not name: raise InfraError('name the server to delete')
         known = {s['name'] for s in self.servers()}
         if name not in known: raise InfraError(f'no server called {name}')
         self._hetzner().delete(name)
         return {'deleted': name}
-    def keys(self): return list(self._hetzner().keys())
+    def keys(self):
+        "The SSH keys on the Hetzner account."
+        return list(self._hetzner().keys())
     def tunnels(self):
-        "Live Cloudflare tunnels, trimmed to what a panel can show."
+        "Cloudflare tunnels that have not been deleted, with their status and connection count."
         rows = [{'id': t.get('id') or '', 'name': t.get('name') or '',
                  'status': t.get('status') or '', 'created_at': str(t.get('created_at') or ''),
                  'deleted_at': str(t.get('deleted_at') or ''),
                  'connections': len(t.get('connections') or [])} for t in self._cf().tunnels()]
         return [r for r in rows if not r['deleted_at']]
     def delete_tunnel(self, tunnel_id):
+        "Delete one Cloudflare tunnel by id."
         tunnel_id = str(tunnel_id or '').strip()
         if not tunnel_id: raise InfraError('name the tunnel to delete')
         self._cf().delete_tunnel(tunnel_id)
         return {'deleted': tunnel_id}
     def zones(self):
+        "The Cloudflare zones this token can see."
         return [{'id': z.get('id') or '', 'name': z.get('name') or '', 'status': z.get('status') or ''}
                 for z in self._cf().zones()]
     def records(self, zone):
@@ -109,10 +115,10 @@ class Infra:
         zid = zone if len(zone) == 32 and '.' not in zone else cf.zone_id(zone)
         return sorted((_record(r) for r in cf.dns_records(zid)), key=lambda r: (r['name'], r['type']))
     def verify(self):
-        "cfeasy's own token check, so a permissions problem is named before a deploy hits it."
+        "Run cfeasy's token check, so a missing permission shows up before a deploy."
         return self._cf().verify()
     def overview(self):
-        "Everything at once as `{rows, error}` each, so Cloudflare being down cannot hide the servers."
+        "Servers, tunnels and zones as `{rows, error}` each, so one failing provider cannot hide the others."
         out = {'status': self.status()}
         for key, fn in (('servers', self.servers), ('tunnels', self.tunnels), ('zones', self.zones)):
             try: out[key] = {'rows': fn(), 'error': ''}

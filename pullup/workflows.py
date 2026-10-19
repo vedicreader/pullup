@@ -56,7 +56,7 @@ def _yaml():
     return _Plain()
 
 def levels(jobs):
-    "Jobs arranged into rows: everything that can start, then what follows, by longest path."
+    "Arrange jobs into rows, each one row below its deepest dependency, with any cycle in a last row."
     known = {j['id'] for j in jobs}
     depth, pending = {}, list(jobs)
     for _ in range(len(jobs) + 1):
@@ -76,11 +76,12 @@ def levels(jobs):
 
 # %% ../nbs/05_workflows.ipynb #0a49ba6a
 class Workflows:
-    "Every workflow in one repository: the files, the graph, the runs, and the secrets."
+    "The workflows of one repository: local files, runs on GitHub, the catalogue, and secrets."
     def __init__(self, root): self.root = Path(root).expanduser().resolve()
     @property
     def dir(self): return self.root/WORKFLOW_DIR
     def files(self):
+        "The workflow files in `.github/workflows`, sorted by name."
         try: return sorted(p for p in self.dir.iterdir() if p.suffix in ('.yml', '.yaml'))
         except OSError: return []
     @staticmethod
@@ -122,7 +123,7 @@ class Workflows:
             'environment': str(env.get('name') or '') if isinstance(env, dict) else str(env or ''),
             'steps': cls._steps(job.get('steps'))}
     def parse(self, path):
-        "One workflow file as jobs and edges, or as the error that stopped it being read."
+        "One workflow file as a row of triggers and jobs, with any read error in `error`."
         path = Path(path)
         row = {'file': path.name, 'path': str(path), 'name': path.stem, 'triggers': [],
             'jobs': [], 'levels': [], 'dispatchable': False, 'error': ''}
@@ -139,7 +140,9 @@ class Workflows:
         row['jobs'] = [self._job(k, v) for k, v in (jobs.items() if isinstance(jobs, dict) else ())]
         row['levels'] = levels(row['jobs'])
         return row
-    def parsed(self): return [self.parse(p) for p in self.files()]
+    def parsed(self):
+        "Every workflow file, parsed."
+        return [self.parse(p) for p in self.files()]
     def repo(self):
         "`owner/name` from the origin remote, or `''` when there is no GitHub remote."
         try:
@@ -155,7 +158,7 @@ class Workflows:
         owner, name, api = _opened(core, 'gh_api')(token, str(self.root))
         return owner, name, _sync_api(core, owner, name, token, api)
     def status(self):
-        "Whether the GitHub half is usable, and if not, which of gheasy, remote or token is missing."
+        "Whether the GitHub features can be used, and if not, whether gheasy, a remote or a token is missing."
         row = {'gheasy': True, 'dockeasy': installed('dockeasy'), 'repo': '', 'token': False,
             'gh_cli': bool(which('gh')), 'gh_auth': _gh_authed(), 'why': ''}
         try: core = _gheasy()
@@ -173,7 +176,7 @@ class Workflows:
             else api.actions.list_workflow_runs_for_repo(**kw))
         return [_run_row(run) for run in (raw.get('workflow_runs') or [])]
     def run_jobs(self, run_id):
-        "The jobs of one run, so a red workflow says which box is red."
+        "The jobs of one run, with the status of each step."
         owner, name, api = self._api()
         raw = api.actions.list_jobs_for_workflow_run(run_id=int(run_id), per_page=100)
         return [{'id': j.get('id'), 'name': j.get('name') or '', 'status': j.get('status') or '',
@@ -184,13 +187,14 @@ class Workflows:
                 for s in (j.get('steps') or [])]}
             for j in (raw.get('jobs') or [])]
     def dispatch(self, workflow, ref='', inputs=None):
-        "Start a run. The workflow must declare `workflow_dispatch`; GitHub refuses otherwise."
+        "Start a run of a workflow that declares `workflow_dispatch`."
         owner, name, api = self._api()
         if not str(workflow).strip(): raise WorkflowError('choose a workflow to run')
         ref = str(ref or '').strip() or _gheasy()._git_branch(str(self.root))
         api.actions.create_workflow_dispatch(workflow_id=str(workflow), ref=ref, inputs=dict(inputs or {}))
         return {'workflow': str(workflow), 'ref': ref}
     def cancel(self, run_id):
+        "Cancel one run."
         owner, name, api = self._api()
         api.actions.cancel_workflow_run(run_id=int(run_id))
         return {'cancelled': int(run_id)}
@@ -207,14 +211,14 @@ class Workflows:
             raise WorkflowError('this project has no .gheasy/config.json to generate from')
         return core.mk_workflow(core.GheasyConfig.load(str(self.root)))
     def write_generated(self):
-        "Write it through gheasy's `gh_workflow`, the same call the CLI makes. Never commits."
+        "Write gheasy's generated workflow with `gh_workflow`, as the gheasy CLI does; nothing is committed."
         core = _gheasy()
         if not core.cfg_path(str(self.root)).exists():
             raise WorkflowError('this project has no .gheasy/config.json to generate from')
         core.gh_workflow(path=str(self.root))
         return {'path': str(self.dir/'gheasy.yml')}
     def detect(self):
-        "What this project is, from the files that say so and from dockeasy's `detect_app`."
+        "What the project is, from its files and from dockeasy's `detect_app`."
         root = self.root
         has = lambda *names: any((root/n).exists() for n in names)
         text = ''.join(_read(root/n) for n in ('pyproject.toml', 'requirements.txt')).lower()
@@ -238,7 +242,7 @@ class Workflows:
         except Exception as e: row['build_why'] = f'{type(e).__name__}: {e}'
         return row
     def catalogue(self):
-        "The workflows on offer, every one of them gheasy's, each marked with whether this project wants it."
+        "The workflows pullup can add, each marked as recommended or not and present or not."
         d = self.detect()
         present = {p.name for p in self.files()}
         rows = [
@@ -302,13 +306,13 @@ class Workflows:
         deploy_job(wfb, 'deploy', {}, cfg.get('env_schema') or {}, app)
         return wfb.build()
     def build(self, spec):
-        "A spec from the builder as YAML, composed entirely with gheasy's DSL."
+        "The YAML for a workflow-builder spec, composed with gheasy."
         _gheasy()
         from .wfbuild import compose
         cfg = self.config() or {}
         return compose(spec, schema=self.schema(), app=str(cfg.get('app') or self.root.name))
     def write_spec(self, spec, file=''):
-        "Write a built workflow, and keep the spec beside it. Reading YAML back into one is lossy."
+        "Write the YAML for a spec into `.github/workflows` and save the spec beside it."
         _gheasy()
         from .wfbuild import save_spec
         name = _wf_name(str(file or spec.get('file') or f"{spec.get('name') or 'ci'}.yml"))
@@ -333,7 +337,7 @@ class Workflows:
         _gheasy()
         return self._build(str(choice)).to_yaml()
     def add(self, choice, file=''):
-        "Write one catalogue entry into `.github/workflows`. Never overwrites silently."
+        "Write one catalogue entry into `.github/workflows`; raises if the file exists."
         _gheasy()
         rows = {r['id']: r for r in self.catalogue()['workflows']}
         row = rows.get(str(choice))
@@ -364,11 +368,11 @@ class Workflows:
         path.write_text(text if text.endswith('\n') else text + '\n', encoding='utf-8')
         return {'path': str(path)}
     def schema(self):
-        "gheasy's `env_schema`: `{KEY: None}` is a secret, `{KEY: default}` is a variable."
+        "gheasy's `env_schema`, where `None` marks a secret and any other value is a variable's default."
         cfg = self.config() or {}
         return dict(cfg.get('env_schema') or {})
     def remote_env(self):
-        "What GitHub already has. Secret *values* are not readable, by GitHub's design."
+        "The secrets and variables already on GitHub; secrets come back as names only."
         owner, name, api = self._api()
         secrets = [{'name': s.get('name'), 'updated_at': s.get('updated_at') or ''}
             for s in (api.actions.list_repo_secrets(per_page=100).get('secrets') or [])]
@@ -376,7 +380,7 @@ class Workflows:
             for v in (api.actions.list_repo_variables(per_page=100).get('variables') or [])]
         return {'secrets': secrets, 'variables': variables}
     def push_env(self, values, keys=(), dry_run=False):
-        "Send values up through gheasy's `gh_push_env`, one result per key; undeclared keys are skipped."
+        "Push values for the declared keys to GitHub through gheasy, one result row per key."
         core = _gheasy()
         if not which('gh'):
             raise WorkflowError('pushing secrets uses the GitHub CLI: install `gh` and run `gh auth login`')

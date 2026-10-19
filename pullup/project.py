@@ -13,14 +13,14 @@ __all__ = ['NBDEV_STEPS', 'FASTSHIP_STEPS', 'PLAIN_STEPS', 'MATURIN_STEPS', 'CRA
 # %% ../nbs/01_project.ipynb #31448c78
 @dataclass
 class Step:
-    "One command in a pipeline."
+    "One command in a release or deploy, with the keys it needs and the text that describes it."
     id: str
     label: str
     cmd: str
     doc: str = ''
     needs: list = field(default_factory=list)   # environment keys the command reads
-    argv: list = field(default_factory=list)    # spelled out, where `cmd` would not split correctly
-    meta: dict = field(default_factory=dict)
+    argv: list = field(default_factory=list)    # exact arguments to run, for a command that `cmd` would not split correctly
+    meta: dict = field(default_factory=dict)    # anything else a caller keeps with the step
     def dict(self): return {'id': self.id, 'label': self.label, 'cmd': self.cmd, 'doc': self.doc,
                             'needs': list(self.needs), 'argv': list(self.argv), 'meta': dict(self.meta)}
 
@@ -33,7 +33,7 @@ def _toml(root, name='pyproject.toml'):
     except (OSError, ValueError): return {}
 
 def nbdev_project(root):
-    "An nbdev project: `settings.ini` for nbdev 2, or `[tool.nbdev]` in `pyproject.toml`."
+    "Whether `root` is an nbdev project, by its nbdev 2 `settings.ini` or its `pyproject.toml`."
     try:
         text = (Path(root)/'settings.ini').read_text(encoding='utf-8', errors='replace')
         if '[DEFAULT]' in text and any(k in text for k in ('nbs_path', 'lib_name', 'doc_path')):
@@ -43,22 +43,22 @@ def nbdev_project(root):
     return 'nbdev' in (data.get('tool') or {}) or 'nbdev' in ((data.get('project') or {}).get('entry-points') or {})
 
 def rust_project(root):
-    "A crate: something cargo can build, whether or not Python ever sees it."
+    "Whether `root` is a Rust crate, meaning it has a `Cargo.toml`."
     return (Path(root)/'Cargo.toml').exists()
 
 def maturin_project(root):
-    "A crate that is also a Python package: maturin builds the wheel, so the release is PyPI's."
+    "Whether `root` is a Rust crate that maturin builds into a Python wheel."
     if not rust_project(root): return False
     data = _toml(root)
     backend = str((data.get('build-system') or {}).get('build-backend') or '')
     return backend.startswith('maturin') or 'maturin' in (data.get('tool') or {})
 
 def fastship_project(root):
-    "A Python package fastship releases: a `pyproject.toml`, and not an nbdev project."
+    "Whether `root` is a Python package with a `pyproject.toml` that is not an nbdev project."
     return (Path(root)/'pyproject.toml').exists() and not nbdev_project(root)
 
 def app_project(root):
-    "Whether the project packages itself into a desktop app, by the `setup_app.py` convention."
+    "Whether the project also builds a desktop app, marked by `setup_app.py` and `tools/build_release.py`."
     root = Path(root)
     return (root/'tools'/'build_release.py').exists() and (root/'setup_app.py').exists()
 
@@ -134,7 +134,7 @@ FLOWS = {'nbdev': NBDEV_STEPS, 'fastship': FASTSHIP_STEPS, 'plain': PLAIN_STEPS,
 
 # %% ../nbs/01_project.ipynb #ad092499
 def release_flow(root):
-    "Return the project's release flow."
+    "The name of the release flow that fits the project in `root`."
     if nbdev_project(root): return 'nbdev'
     if maturin_project(root): return 'maturin'
     if rust_project(root): return 'crate'
@@ -147,13 +147,13 @@ def _with_app(steps):
     return [*steps[:i], *APP_STEPS, *steps[i:]]
 
 def default_steps(root, flows=None):
-    "Return the project's release steps, including app packaging."
+    "The release steps for `root`, with the desktop-app steps added when the project builds one."
     steps = list((flows or FLOWS)[release_flow(root)])
     return _with_app(steps) if app_project(root) else steps
 
 # %% ../nbs/01_project.ipynb #7597cd64
 class Project:
-    "What kind of project one folder holds, and what releasing it takes."
+    "The kind of project one folder holds and the steps that release it."
     def __init__(self, root, flows=None):
         self.root, self.flows = Path(root).expanduser().resolve(), flows or FLOWS
     @property

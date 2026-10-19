@@ -21,7 +21,7 @@ class PipelineError(RuntimeError): pass
 
 # %% ../nbs/02_pipeline.ipynb #188d9332
 def resolve_script(argv, python=None, env=None):
-    "The executable to spawn, accepting either spelling of a hyphenated command."
+    "The command with its program replaced by a full path, trying both the hyphen and the underscore spelling."
     name = argv[0]
     spellings = (name, name.replace('_', '-'), name.replace('-', '_'))
     bindir = str(Path(python).parent) if python else ''
@@ -32,7 +32,7 @@ def resolve_script(argv, python=None, env=None):
     return argv
 
 def uv_argv(root, argv):
-    "Run `argv` through uv when `root` has a uv lockfile."
+    "The command wrapped in `uv run` for a project with a `uv.lock`, or None when uv does not apply."
     root = Path(root)
     if not (root/'uv.lock').exists(): return None
     exe = which('uv')
@@ -45,14 +45,14 @@ def uv_argv(root, argv):
 
 # %% ../nbs/02_pipeline.ipynb #9adafa7a
 class Pipeline:
-    "A named sequence of commands for one project: its steps, its state, and its terminal."
+    "An ordered plan of commands for one project, with each step's result and a shared terminal transcript."
     FILE = 'pipeline.json'
     KIND = 'pipeline'
     @staticmethod
     def defaults(root): return []
     def __init__(self,
         root,             # the project the commands run in
-        python=None,      # the interpreter whose environment they run in; None uses this process's
+        python=None,      # the interpreter whose virtual environment they run in; None uses this process's
         env=None,         # an `EnvStore`, or anything with `.get(key)` and `.values(keys)`
         dir=DIR,          # where the plan is written, relative to `root`
     ):
@@ -79,7 +79,7 @@ class Pipeline:
             meta=dict(row.get('meta') or {})) for i, row in enumerate(rows)]
         return out or self.defaults(self.root)
     def save(self, steps):
-        "Persist an edited pipeline. Refuses a plan with no runnable command in it."
+        "Write a new plan and return the state; raises when no step has a command."
         rows = [s for s in (steps or ()) if str((s or {}).get('cmd') or '').strip()]
         if not rows: raise PipelineError('a pipeline needs at least one step with a command')
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -87,18 +87,19 @@ class Pipeline:
         self.steps = self._load()
         return self.state()
     def reset_plan(self):
-        "Back to the default pipeline for this kind of project, without deleting the file."
+        "Put the default plan back in memory, leaving the saved file in place."
         self.steps = self.defaults(self.root)
         return self.state()
     def step(self, step_id):
+        "The step with this id; raises `PipelineError` for an unknown one."
         found = first(self.steps, lambda s: s.id == str(step_id))
         if found is None: raise PipelineError(f'unknown {self.KIND} step: {step_id}')
         return found
     def needs(self):
-        "Every environment key the pipeline names, in the order the steps name them."
+        "Every environment key the plan names, once each, in the order the steps name them."
         return list(L(self.steps).attrgot('needs').concat().unique())
     def missing(self, step):
-        "Keys this step names that the environment store cannot produce."
+        "The keys this step needs that the environment store cannot supply."
         try: return [k for k in step.needs if not self.env.get(k)]
         except Exception: return [k for k in step.needs if not os.environ.get(k)]
     def _env(self):
@@ -116,7 +117,7 @@ class Pipeline:
             'code': r.get('code'), 'started': r.get('started', 0), 'finished': r.get('finished', 0),
             'missing': self.missing(s)}
     def state(self):
-        "Everything about this pipeline that a caller could want to draw or assert on."
+        "The plan, each step's status and the overall progress, as plain data."
         rows = [self._row(s) for s in self.steps]
         failed = first(rows, lambda r: r['status'] == 'failed')
         return {'root': str(self.root), 'kind': self.KIND, 'path': str(self.path),
@@ -126,7 +127,7 @@ class Pipeline:
             'done': bool(rows) and all(r['status'] in ('passed', 'skipped') for r in rows),
             'needs': self.needs()}
     def subscribe(self):
-        "A queue of terminal frames for one viewer, primed with what has already scrolled by."
+        "A queue of terminal output for one viewer, starting with everything printed so far."
         q = asyncio.Queue()
         if self.log: q.put_nowait(bytes(self.log))
         self._subs.add(q)
@@ -139,12 +140,12 @@ class Pipeline:
             try: q.put_nowait(data)
             except Exception: self._subs.discard(q)
     def write(self, data):
-        "Keystrokes into the running step: twine asks for a password."
+        "Send keystrokes to the running step, for example to answer a password prompt."
         if self.pty is not None and self.pty.alive: self.pty.write(data)
     def resize(self, cols, rows):
         if self.pty is not None: self.pty.resize(rows, cols)
     def tail(self, lines=80):
-        "The end of the transcript as plain text, escapes gone and bare returns made newlines."
+        "The last `lines` of the transcript as plain text, without colour codes."
         text = strip_ansi(bytes(self.log).decode('utf-8', 'replace'))
         rows = text.replace('\r\n', '\n').replace('\r', '\n').rstrip('\n').split('\n')
         return '\n'.join(rows[-max(1, int(lines)):])
@@ -152,7 +153,7 @@ class Pipeline:
         "The executable to spawn, from this pipeline's interpreter."
         return uv_argv(self.root, argv) or resolve_script(argv, self.python, env)
     async def start(self, step_id='', auto=True):
-        "Run one step, then keep going while they pass. Refuses to start a second one."
+        "Start one step and, with `auto`, the steps after it while they pass; raises if a step is running."
         if self.active: raise PipelineError(f'{self.active} is still running')
         self._auto = bool(auto)
         step = self.step(step_id) if step_id else self._next()
@@ -201,7 +202,7 @@ class Pipeline:
         self._broadcast(f'\r\n{note}{step.label} exited {code}\x1b[0m\r\n'.encode())
         if ok and self._auto and (nxt := self._after(step)) is not None: await self._run(nxt)
     def stop(self):
-        "Stop the pipeline where it is. The step is killed; what it already did stays done."
+        "Kill the running step, mark it failed and stop the run; earlier results stay."
         import signal
         self._auto = False
         step_id, self.active = self.active, ''
@@ -221,14 +222,14 @@ class Pipeline:
                                  'finished': int(time.time())}
         return self.state()
     def reset(self):
-        "Forget what ran. The commands are unchanged."
+        "Forget every result and clear the transcript, keeping the plan."
         if self.active: raise PipelineError(f'{self.active} is still running')
         self.results.clear()
         self.log.clear()
         self._broadcast(b'\x1b[2J\x1b[H')
         return self.state()
     def blame(self, checkouts=(), family=None):
-        "Which of your own packages raised in the last failure, pointed at your checkout of it."
+        "Which of your packages raised in the last failure, and the file to open in your checkout."
         from pullup.stack import blame as attribute
         if not any((self.results.get(s.id) or {}).get('status') == 'failed' for s in self.steps):
             return {}
@@ -236,7 +237,7 @@ class Pipeline:
 
 # %% ../nbs/02_pipeline.ipynb #e22f9231
 class Release(Pipeline):
-    "The release pipeline: nbdev's commands, fastship's for a package that is not one, else plain."
+    "The release pipeline, whose default plan is the project's release flow."
     FILE = 'release.json'
     KIND = 'release'
     @staticmethod

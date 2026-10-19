@@ -36,15 +36,15 @@ DriveError = PipelineError
 # %% ../nbs/04_drive.ipynb #3ab3ed04
 @dataclass
 class Part:
-    "One library call, as a step you can run on its own."
+    "One deploy operation as a code template that can run as a step on its own."
     id: str
-    package: str
+    package: str        # the library the code calls
     label: str
     doc: str
-    code: str
-    needs: list = field(default_factory=list)
-    writes: list = field(default_factory=list)
-    produces: list = field(default_factory=list)
+    code: str           # Python source whose `{placeholders}` are filled from `context`
+    needs: list = field(default_factory=list)      # keys the code reads
+    writes: list = field(default_factory=list)     # keys the code stores
+    produces: list = field(default_factory=list)   # files the code creates
 
 # %% ../nbs/04_drive.ipynb #b80f6bff
 PARTS = [
@@ -111,7 +111,7 @@ PARTS = [
 
 # %% ../nbs/04_drive.ipynb #0cd71f13
 def context(root, env=None):
-    "The values every snippet is rendered with, resolved once."
+    "The project values every part's template is filled with: names, host, tunnel, port and file lists."
     root = Path(root).expanduser().resolve()
     store = env or EnvStore()
     def value(key, default=''): return env_value(store, key, default)
@@ -151,13 +151,13 @@ def _step(part, exe, ctx):
 
 # %% ../nbs/04_drive.ipynb #b532d107
 def parts(root, env=None, python=''):
-    "Every part as a runnable step, with this project's values already in the snippet."
+    "Every part as a runnable `Step`, its template filled with this project's values."
     ctx = context(root, env)
     return [_step(p, str(python or sys.executable), ctx) for p in PARTS]
 
 # %% ../nbs/04_drive.ipynb #bc95dca4
 class Drive(Pipeline):
-    "The deploy, driven a library at a time."
+    "The deploy as six separate library calls, each a step you can run on its own."
     FILE = DRIVE_FILE
     KIND = 'drive'
     def __init__(self, root, python=None, env=None, dir=DIR):
@@ -166,7 +166,7 @@ class Drive(Pipeline):
     @staticmethod
     def defaults(root): return parts(root)
     def refresh(self):
-        "Re-render the snippets against the current values."
+        "Render the parts again if the store's values changed, unless a plan has been saved."
         if self.path.exists(): return self.steps
         key = json.dumps(context(self.root, self.env), sort_keys=True)
         if key != self._rendered:

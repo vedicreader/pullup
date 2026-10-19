@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # %% auto #0
-__all__ = ['WORKFLOW_DIR', 'WorkflowError', 'levels', 'Workflows']
+__all__ = ['WORKFLOW_DIR', 'WorkflowError', 'gheasy_core', 'levels', 'Workflows']
 
 # %% ../nbs/05_workflows.ipynb #13d36d32
 import re
@@ -29,12 +29,15 @@ class WorkflowError(RuntimeError):
     pass
 
 # %% ../nbs/05_workflows.ipynb #21f04074
-def _gheasy():
+def gheasy_core():
+    'Return the `gheasy.core` module, raising `WorkflowError` with the install hint when gheasy is missing.'
     try:
         import gheasy.core as core
         return core
     except ImportError as e:
         raise WorkflowError(needs_extra('this needs gheasy')) from e
+
+_gheasy = gheasy_core
 
 def _opened(core, name, was=None):
     "gheasy's helper under whichever spelling it has: public from 0.0.10, underscored before it."
@@ -46,8 +49,8 @@ def _opened(core, name, was=None):
 def _yaml():
     "gheasy's ruamel instance for reading a workflow, or plain pyyaml where gheasy is not installed."
     try:
-        import gheasy.workflow as w
-        if (mk := getattr(w, 'yaml_instance', None) or getattr(w, '_yaml_instance', None)): return mk()
+        from gheasy.workflow import yaml_instance
+        return yaml_instance()
     except ImportError: pass
     import yaml
     class _Plain:
@@ -146,12 +149,12 @@ class Workflows:
     def repo(self):
         "`owner/name` from the origin remote, or `''` when there is no GitHub remote."
         try:
-            core = _gheasy()
+            core = gheasy_core()
             owner, name = _opened(core, 'repo_slug', '_get_repo_slug')(str(self.root))
             return f'{owner}/{name}'
         except Exception: return ''
     def _api(self):
-        core = _gheasy()
+        core = gheasy_core()
         token = _opened(core, 'gh_token', '_resolve_gh_token')()
         if not token:
             raise WorkflowError('set GITHUB_TOKEN — add it in Environment below, or export it before starting Leela')
@@ -161,7 +164,7 @@ class Workflows:
         "Whether the GitHub features can be used, and if not, whether gheasy, a remote or a token is missing."
         row = {'gheasy': True, 'dockeasy': installed('dockeasy'), 'repo': '', 'token': False,
             'gh_cli': bool(which('gh')), 'gh_auth': _gh_authed(), 'why': ''}
-        try: core = _gheasy()
+        try: core = gheasy_core()
         except WorkflowError as e: return row | {'gheasy': False, 'why': str(e)}
         row['repo'] = self.repo()
         row['token'] = bool(_opened(core, 'gh_token', '_resolve_gh_token')())
@@ -190,7 +193,7 @@ class Workflows:
         "Start a run of a workflow that declares `workflow_dispatch`."
         owner, name, api = self._api()
         if not str(workflow).strip(): raise WorkflowError('choose a workflow to run')
-        ref = str(ref or '').strip() or _gheasy()._git_branch(str(self.root))
+        ref = str(ref or '').strip() or gheasy_core()._git_branch(str(self.root))
         api.actions.create_workflow_dispatch(workflow_id=str(workflow), ref=ref, inputs=dict(inputs or {}))
         return {'workflow': str(workflow), 'ref': ref}
     def cancel(self, run_id):
@@ -200,19 +203,19 @@ class Workflows:
         return {'cancelled': int(run_id)}
     def config(self):
         "The project's `.gheasy/config.json`, or None when gheasy has not been set up here."
-        try: core = _gheasy()
+        try: core = gheasy_core()
         except WorkflowError: return None
         if not core.cfg_path(str(self.root)).exists(): return None
         return core.GheasyConfig.load(str(self.root)).to_dict()
     def generate(self):
         "The workflow gheasy would write for this project, as text, without writing it."
-        core = _gheasy()
+        core = gheasy_core()
         if not core.cfg_path(str(self.root)).exists():
             raise WorkflowError('this project has no .gheasy/config.json to generate from')
         return core.mk_workflow(core.GheasyConfig.load(str(self.root)))
     def write_generated(self):
         "Write gheasy's generated workflow with `gh_workflow`, as the gheasy CLI does; nothing is committed."
-        core = _gheasy()
+        core = gheasy_core()
         if not core.cfg_path(str(self.root)).exists():
             raise WorkflowError('this project has no .gheasy/config.json to generate from')
         core.gh_workflow(path=str(self.root))
@@ -307,13 +310,13 @@ class Workflows:
         return wfb.build()
     def build(self, spec):
         "The YAML for a workflow-builder spec, composed with gheasy."
-        _gheasy()
+        gheasy_core()
         from .wfbuild import compose
         cfg = self.config() or {}
         return compose(spec, schema=self.schema(), app=str(cfg.get('app') or self.root.name))
     def write_spec(self, spec, file=''):
         "Write the YAML for a spec into `.github/workflows` and save the spec beside it."
-        _gheasy()
+        gheasy_core()
         from .wfbuild import save_spec
         name = _wf_name(str(file or spec.get('file') or f"{spec.get('name') or 'ci'}.yml"))
         text = self.build(spec)
@@ -334,11 +337,11 @@ class Workflows:
         return {'spec': spec, 'stale': stale}
     def preview(self, choice):
         "The YAML a catalogue entry would write, without writing it."
-        _gheasy()
+        gheasy_core()
         return self._build(str(choice)).to_yaml()
     def add(self, choice, file=''):
         "Write one catalogue entry into `.github/workflows`; raises if the file exists."
-        _gheasy()
+        gheasy_core()
         rows = {r['id']: r for r in self.catalogue()['workflows']}
         row = rows.get(str(choice))
         if row is None: raise WorkflowError(f'unknown workflow: {choice}')
@@ -381,7 +384,7 @@ class Workflows:
         return {'secrets': secrets, 'variables': variables}
     def push_env(self, values, keys=(), dry_run=False):
         "Push values for the declared keys to GitHub through gheasy, one result row per key."
-        core = _gheasy()
+        core = gheasy_core()
         if not which('gh'):
             raise WorkflowError('pushing secrets uses the GitHub CLI: install `gh` and run `gh auth login`')
         schema = self.schema()

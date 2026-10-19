@@ -12,8 +12,8 @@ license = {text = "Apache-2.0"}
 authors = [{name = "Karthik Rajgopal", email = "karthik.rajgopal@hotmail.com"}]
 keywords = ['nbdev', 'jupyter', 'notebook', 'python']
 classifiers = ["Natural Language :: English", "Intended Audience :: Developers", "Development Status :: 3 - Alpha", "Programming Language :: Python :: 3", "Programming Language :: Python :: 3 :: Only"]
-dependencies = ['fastcore>=1.8.17', 'ptymini>=0.0.5', 'pyyaml>=6.0', 'dockeasy>=0.0.5',
-                'gheasy>=0.0.10', 'vpseasy>=0.0.18', 'cfeasy>=0.0.4', 'python-dotenv>=1.0.0',
+dependencies = ['fastcore>=1.8.17', 'ptymini>=0.0.5', 'pyyaml>=6.0', 'dockeasy>=0.0.10',
+                'gheasy>=0.0.10', 'vpseasy>=0.0.24', 'cfeasy>=0.0.6', 'python-dotenv>=1.0.0',
                 'keyring>=25.0.0']
 
 [project.urls]

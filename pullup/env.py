@@ -99,7 +99,7 @@ class EnvStore:
         return {'key': key, 'secret': bool(secret)}
     def unset(self, key):
         "Remove a value from the keychain, the env file and `os.environ`, and say which of the first two held it."
-        from dockeasy.core import _FASTOPS_ENV
+        from dockeasy.core import FASTOPS_ENV
         from dotenv import unset_key
         key, gone = str(key), []
         try:
@@ -108,7 +108,7 @@ class EnvStore:
                 keyring.delete_password(self.service, key)
                 gone.append('keychain')
         except Exception: pass
-        path = str(self.path or _FASTOPS_ENV)
+        path = str(self.path or FASTOPS_ENV)
         try:
             removed, _ = unset_key(path, key)
             if removed: gone.append('env file')

@@ -224,15 +224,15 @@ wheels = [
 
 [[package]]
 name = "cfeasy"
-version = "0.0.4"
+version = "0.0.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cloudflare" },
     { name = "fastcore" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/02/b0/8f0e82a6b2224efe239ebd91cfe50d9f5db9fa88d3daff848ea357d4ec3f/cfeasy-0.0.4.tar.gz", hash = "sha256:87805b985333f286b0745d65da0235aa078b75396ea1c798cda1de259a38e22f", size = 11913, upload-time = "2026-05-17T09:47:40.784Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/8d/e4/e344ce90991057c8cd72cb4a8f69e97e27a8bd208861c23a385fe96d4bb5/cfeasy-0.0.6.tar.gz", hash = "sha256:42db8caf57f4d24f775ad27eef3ec8ab4ccbc984b87d60a0da7647b06eedf9a7", size = 14583, upload-time = "2026-10-19T06:32:31.835Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5d/cf/44e49c29009f3aa9bac94ec2d7bb1f3eddaeae14244e28dcfa71e1434acb/cfeasy-0.0.4-py3-none-any.whl", hash = "sha256:fe0fd6a60737935008a9d1b2d2720b9f12d72ec91e496ffe651c0210c516cebf", size = 13088, upload-time = "2026-05-17T09:47:39.196Z" },
+    { url = "https://files.pythonhosted.org/packages/80/ed/232b2d7265a13b933218c0458eb7f8e79e002883a8ccef474cc595b0cf39/cfeasy-0.0.6-py3-none-any.whl", hash = "sha256:5d89c141486c42ad8a30e592c17a1abb6edf1c91c929db2ff74d570414b2a9bc", size = 15542, upload-time = "2026-10-19T06:32:29.949Z" },
 ]
 
 [[package]]
@@ -623,17 +623,18 @@ wheels = [
 
 [[package]]
 name = "dockeasy"
-version = "0.0.6"
+version = "0.0.10"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "fastcore" },
     { name = "keyring" },
     { name = "notebook" },
     { name = "python-dotenv" },
+    { name = "pyyaml" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/79/67/4bb57316ac797c3efd9fa359cb61e33acdea00c3f1387d0c44f7f3e8692c/dockeasy-0.0.6.tar.gz", hash = "sha256:e1b56d2f0e34749aed5532aa6fd5d933751459c3853b40e99fa96dacc9d0f0ee", size = 22495, upload-time = "2026-08-14T02:17:01.286Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e7/ef/9636340cc52933d2413498accf9bce816c0cd9e6afbf28caa93c9b62eade/dockeasy-0.0.10.tar.gz", hash = "sha256:a36a95e83f27f0cf877f4f6af80bc62ca0c5475b0038ef23f4310f47e49ec87f", size = 28665, upload-time = "2026-10-19T07:15:09.987Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/49/98/41ef19a548e29eb7e146655cf1ac6add306505f67712effef98685205b5f/dockeasy-0.0.6-py3-none-any.whl", hash = "sha256:f6434f972412b66c8b471772191f5d0cdf1da60f775c72b1b3c44e9f5e1761a7", size = 23833, upload-time = "2026-08-14T02:17:00.21Z" },
+    { url = "https://files.pythonhosted.org/packages/98/e7/f7538ccf1d3dc694d4a70fc89f0fc3421a4616502f259c37e928e7beac2c/dockeasy-0.0.10-py3-none-any.whl", hash = "sha256:e60525e6fce5804e6a57a58225fe863b320ea18af7cfdeaeea3ca6d314cd03cc", size = 30045, upload-time = "2026-10-19T07:15:08.847Z" },
 ]
 
 [[package]]
@@ -1693,15 +1694,15 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "cfeasy", specifier = ">=0.0.4" },
-    { name = "dockeasy", specifier = ">=0.0.5" },
+    { name = "cfeasy", specifier = ">=0.0.6" },
+    { name = "dockeasy", specifier = ">=0.0.10" },
     { name = "fastcore", specifier = ">=1.8.17" },
     { name = "gheasy", specifier = ">=0.0.10" },
     { name = "keyring", specifier = ">=25.0.0" },
     { name = "ptymini", specifier = ">=0.0.5" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "pyyaml", specifier = ">=6.0" },
-    { name = "vpseasy", specifier = ">=0.0.18" },
+    { name = "vpseasy", specifier = ">=0.0.24" },
 ]
 
 [package.metadata.requires-dev]
@@ -2483,17 +2484,18 @@ wheels = [
 
 [[package]]
 name = "vpseasy"
-version = "0.0.18"
+version = "0.0.24"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "dockeasy" },
     { name = "fastcloudinit" },
     { name = "fastcore" },
     { name = "hcloud" },
+    { name = "pyyaml" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d8/56/21b06d9170af600da979b1cc7c64cfabbb399d81c243b0128b4cdb17d767/vpseasy-0.0.18.tar.gz", hash = "sha256:d6c3861658b415f9b15b4dd2cd71cb15743aa2c21276ace4d5549d09568574ef", size = 19251, upload-time = "2026-06-27T03:29:49.272Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d7/87/fbda3c9e05aa4b6eb7116030409945bc06738caa487daa0e65e3d9cb2ec0/vpseasy-0.0.24.tar.gz", hash = "sha256:f55b07043d65e513004d0ec62ee4b555b381f725bf9c12006ebb73eb62c127e6", size = 33030, upload-time = "2026-10-19T07:11:20.024Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0b/02/94e5783d69bf7cfcbeb938dadd8ef4fa9e3574c302d90b2126e6572ef572/vpseasy-0.0.18-py3-none-any.whl", hash = "sha256:e635dbf56404156d09f349a788d11680889dd6169e071cd8d367a27552c8cc42", size = 20605, upload-time = "2026-06-27T03:29:48.074Z" },
+    { url = "https://files.pythonhosted.org/packages/45/e8/d8522d444e365fbbe57408b33a924e111cef87d3826e06f1d51ca7a0b829/vpseasy-0.0.24-py3-none-any.whl", hash = "sha256:37c9a7f068975617b9937b04f664379101e8b714e5f5b06fc8d2044c90903865", size = 34065, upload-time = "2026-10-19T07:11:18.896Z" },
 ]
 
 [[package]]

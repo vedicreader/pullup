@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.9
+
+- `gheasy_core` is public, for hosts that drive gheasy through pullup; `_gheasy` remains as an alias
+- Workflows read YAML through gheasy's public `yaml_instance`, without the fallback to the underscored name
+- `EnvStore.unset` reads dockeasy's public `FASTOPS_ENV`
+- Needs dockeasy 0.0.10, vpseasy 0.0.24 (which the generated `deploy.py` uses) and cfeasy 0.0.6
+
 ## 0.0.8
 
 - The nbdev release flow runs `nbdev-prepare`, `nbdev-bump-version`, `nbdev-release-gh` and `nbdev-pypi`, the commands nbdev 3 installs; the underscore names it ran do not exist there

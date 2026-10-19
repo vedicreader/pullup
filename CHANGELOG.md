@@ -2,6 +2,11 @@
 
 <!-- do not remove -->
 
+## 0.0.10
+
+- Needs vpseasy 0.0.26, cfeasy 0.0.8 and dockeasy 0.0.11: `after_deploy` in the generated `deploy.py` gets vpseasy 0.0.25's `wait_http`, which verifies through the system trust store, so a TLS-inspecting proxy no longer makes it fail; the floor was 0.0.24, which a resolver could still pick
+- The generated `deploy.py rollback prev` undoes the last deploy or rollback, and a rollback no longer orphans the newest build
+
 ## 0.0.9
 
 - `gheasy_core` is public, for hosts that drive gheasy through pullup; `_gheasy` remains as an alias

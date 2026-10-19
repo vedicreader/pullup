@@ -181,7 +181,7 @@ runs whatever this file says.
     python deploy.py compose
     python deploy.py deploy
     python deploy.py status
-    python deploy.py rollback [tag]
+    python deploy.py rollback [tag|prev]
     python deploy.py nuke [--tunnel]
 """
 import os, sys, secrets
@@ -281,7 +281,7 @@ def after_deploy(cf):
     except Exception as e: print(f'cache not purged: {{e}}')
 
 def rollback(to=None):
-    "Run the image before the last deploy, or the kept image tagged `to`."
+    "Run the kept image built before the running one, or the one tagged `to`; `prev` undoes the last deploy or rollback."
     ip = env_get('HETZNER_IP', path=root/'.env')
     if not ip: return print('no server yet')
     vps_rollback(ip, to, path=srv, user=env_get('SERVER_USER', path=root/'.env', default='deploy'),

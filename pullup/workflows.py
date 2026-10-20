@@ -431,7 +431,7 @@ def _gh_authed():
     if not which('gh'): return False
     import subprocess
     try:
-        return subprocess.run(['gh', 'auth', 'status'], capture_output=True, timeout=8).returncode == 0
+        return subprocess.run(['gh', 'auth', 'status'], capture_output=True, timeout=8, stdin=subprocess.DEVNULL).returncode == 0
     except (OSError, subprocess.SubprocessError): return False
 
 # %% ../nbs/05_workflows.ipynb #c1e903a5

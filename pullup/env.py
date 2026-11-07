@@ -89,14 +89,16 @@ class EnvStore:
                   else _call(env_get, key, path=self.path))
         return stored or os.environ.get(key) or ''
     def set(self, key, value, secret=True):
-        "Store one value: a secret in the keychain and the env file, anything else in the env file only."
+        "Store one value: a secret where dockeasy keeps secrets, anything else in the env file. Say where a secret went."
         key = str(key or '').strip()
         if not key: raise EnvError('a key is required')
         if not str(value): raise EnvError(f'{key} needs a value')
         env_get, env_set, secret_get, secret_set = _dockeasy()
-        if secret: _call(secret_set, key, str(value), service=self.service, path=self.path)
-        else: _call(env_set, key, str(value), path=self.path)
-        return {'key': key, 'secret': bool(secret)}
+        if not secret:
+            _call(env_set, key, str(value), path=self.path)
+            return {'key': key, 'secret': False}
+        went = _call(secret_set, key, str(value), service=self.service, path=self.path)
+        return {'key': key, 'secret': True, **(went if isinstance(went, dict) else {})}
     def unset(self, key):
         "Remove a value from the keychain, the env file and `os.environ`, and say which of the first two held it."
         from dockeasy.core import FASTOPS_ENV

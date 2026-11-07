@@ -52,3 +52,10 @@ def test_every_pipeline_kind_writes_under_the_directory_it_was_given(tmp_path):
     for kind, name in ((Deploy, 'deploy.json'), (Drive, 'drive.json')):
         p = kind(tmp_path, dir='.somewhere')
         assert p.path == tmp_path/'.somewhere'/name
+
+def test_a_secret_says_where_dockeasy_kept_it(monkeypatch):
+    "With no keychain the secret goes to a 0600 file, and the Environment panel needs to say so."
+    import pullup.env as pe
+    went = {'keychain': False, 'file': '/tmp/x/.env'}
+    monkeypatch.setattr(pe, '_dockeasy', lambda: (None, None, None, lambda k, v, service, path: went))
+    assert EnvStore().set('TOKEN', 'v') == {'key': 'TOKEN', 'secret': True, 'keychain': False, 'file': '/tmp/x/.env'}

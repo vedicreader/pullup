@@ -2,6 +2,10 @@
 
 <!-- do not remove -->
 
+## 0.0.12
+
+- `EnvStore.set` returns where dockeasy kept a secret: `keychain`, or the 0600 env `file` when no keychain exists.
+
 ## 0.0.11
 
 - `gh auth status` gets `/dev/null` as stdin, so it cannot read or change the terminal the app was started from.

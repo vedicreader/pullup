@@ -2,7 +2,7 @@
 
 <!-- do not remove -->
 
-## Unreleased
+## 0.0.13
 
 - The nbdev release step runs `nbdev-release-gh --no-changelog --no-editor --yes` when `CHANGELOG.md` already opens with an entry for the version (a filled `## Unreleased` is renamed to it). With no entry the step does not run: it takes the state `needs_notes`, and `Release.state()['notes']` names the version and heading. A `release.json` step with any other command is left as written
 - `changelog_state`, `write_changelog`, `claim_unreleased` and `project_version` read and write that entry in nbdev's style

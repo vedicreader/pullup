@@ -2,6 +2,11 @@
 
 <!-- do not remove -->
 
+## 0.0.14
+
+- The nbdev release step runs `nbdev-release-git` when the changelog entry is already committed and git has no tracked change to commit. `nbdev-release-gh` fails there with `nothing to commit`. When a change is waiting, for example a renamed `## Unreleased` heading, the step still runs `nbdev-release-gh --no-changelog --no-editor --yes`. The commit must already be on the remote. A `release.json` step is left as written
+- New `tree_clean` and `release_cmd` pick the command
+
 ## 0.0.13
 
 - The nbdev release step runs `nbdev-release-gh --no-changelog --no-editor --yes` when `CHANGELOG.md` already opens with an entry for the version (a filled `## Unreleased` is renamed to it). With no entry the step does not run: it takes the state `needs_notes`, and `Release.state()['notes']` names the version and heading. A `release.json` step with any other command is left as written

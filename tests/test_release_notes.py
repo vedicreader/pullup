@@ -1,10 +1,10 @@
 "The nbdev release step runs without an editor or a question, and waits for notes when there are none."
-import asyncio, json, os
+import asyncio, json, os, subprocess
 import pytest
 from fastcore.all import Path
 from pullup.project import Step
 from pullup.pipeline import (Pipeline, PipelineError, Release, changelog_state, claim_unreleased,
-    notes_step, project_version, quiet, write_changelog)
+    notes_step, project_version, quiet, release_cmd, tree_clean, write_changelog)
 
 MARK = '<!-- do not remove -->\n'
 
@@ -164,3 +164,62 @@ async def test_every_pipeline_step_gets_a_terminal_type(tmp_path, monkeypatch):
     assert p._env()['TERM'] == 'xterm-256color'
     monkeypatch.setenv('TERM', 'screen')
     assert p._env()['TERM'] == 'screen', 'a real value stays'
+
+def git(root, *a): subprocess.run(['git', '-c', 'user.name=t', '-c', 'user.email=t@t', '-c', 'commit.gpgsign=false', *a], cwd=root, check=True, capture_output=True, stdin=subprocess.DEVNULL)
+
+def committed(tmp_path, changelog):
+    "A throwaway git repo with no remote, whose tree is clean."
+    root = nbdev_root(tmp_path/'proj', changelog=changelog)
+    git(root, 'init', '-q'); git(root, 'add', '-A'); git(root, 'commit', '-q', '-m', 'x')
+    return root
+
+def fake_both(tmp_path):
+    "Stand-ins for the two nbdev release commands, each recording that it ran."
+    bin = tmp_path/'fakebin'; bin.mkdir()
+    for n in ('gh', 'git'):
+        exe = bin/f'nbdev-release-{n}'
+        exe.write_text(f'#!/bin/sh\nprintf "%s\\n" "$@" > "$OUT/{n}.txt"\n'); exe.chmod(0o755)
+    return bin/'python'
+
+def test_a_clean_tree_picks_release_git_and_a_dirty_or_unreadable_one_the_quiet_command(tmp_path):
+    root = committed(tmp_path, f'{MARK}\n## 0.2.0\n\n- new\n')
+    assert tree_clean(root) and release_cmd(root, 'nbdev-release-gh') == 'nbdev-release-git'
+    (root/'untracked.txt').write_text('x')
+    assert tree_clean(root), 'an untracked file is not committed by commit -am'
+    (root/'settings.ini').write_text('[DEFAULT]\nversion = 0.2.1\n')
+    assert not tree_clean(root) and release_cmd(root, 'nbdev-release-gh') == quiet('nbdev-release-gh')
+    assert not tree_clean(tmp_path/'missing') and not tree_clean(tmp_path)
+
+async def test_a_committed_entry_on_a_clean_tree_runs_release_git_only(tmp_path, monkeypatch):
+    root = committed(tmp_path, f'{MARK}\n## 0.2.0\n\n- new\n')
+    monkeypatch.setenv('OUT', str(tmp_path))
+    r = Release(root, python=fake_both(tmp_path), dir='.pullup')
+    await r.start('gh', auto=False)
+    row = next(x for x in (await settle(r))['steps'] if x['id'] == 'gh')
+    assert row['status'] == 'passed' and row['cmd'] == 'nbdev-release-gh'
+    assert (tmp_path/'git.txt').read_text().strip() == '' and not (tmp_path/'gh.txt').exists()
+    assert 'nbdev-release-git' in r.tail()
+
+async def test_a_claimed_unreleased_entry_makes_the_tree_dirty_so_release_gh_commits_it(tmp_path, monkeypatch):
+    root = committed(tmp_path, f'{MARK}\n## Unreleased\n\n- new\n')
+    monkeypatch.setenv('OUT', str(tmp_path))
+    r = Release(root, python=fake_both(tmp_path), dir='.pullup')
+    await r.start('gh', auto=False); await settle(r)
+    assert (tmp_path/'gh.txt').read_text().split() == ['--no-changelog', '--no-editor', '--yes'] and not (tmp_path/'git.txt').exists()
+
+async def test_with_no_entry_a_clean_tree_still_waits_for_notes(tmp_path, monkeypatch):
+    root = committed(tmp_path, f'{MARK}\n## 0.1.0\n\n- old\n')
+    monkeypatch.setenv('OUT', str(tmp_path))
+    r = Release(root, python=fake_both(tmp_path), dir='.pullup')
+    st = await r.start('gh', auto=True)
+    assert next(x for x in st['steps'] if x['id'] == 'gh')['status'] == 'needs_notes'
+    assert not (tmp_path/'git.txt').exists() and not (tmp_path/'gh.txt').exists()
+
+async def test_a_release_json_override_still_wins_on_a_clean_tree(tmp_path, monkeypatch):
+    root = committed(tmp_path, f'{MARK}\n## 0.2.0\n\n- new\n')
+    (root/'.pullup').mkdir()
+    (root/'.pullup'/'release.json').write_text(json.dumps({'steps': [{'id': 'gh', 'label': 'mine', 'cmd': 'nbdev-release-gh --token abc'}]}))
+    monkeypatch.setenv('OUT', str(tmp_path))
+    r = Release(root, python=fake_both(tmp_path))
+    await r.start('gh', auto=False); await settle(r)
+    assert (tmp_path/'gh.txt').read_text().split() == ['--token', 'abc'] and not (tmp_path/'git.txt').exists()

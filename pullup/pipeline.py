@@ -2,7 +2,7 @@
 
 # %% ../nbs/02_pipeline.ipynb #d7426f18
 from __future__ import annotations
-import asyncio, json, os, re, shlex, time
+import asyncio, json, os, re, shlex, subprocess, time
 from dataclasses import replace
 from shutil import which
 from fastcore.all import L, Path, first
@@ -12,9 +12,9 @@ from .env import EnvStore, venv_env
 from .project import Step, default_steps, release_flow, app_project, _toml
 
 # %% auto #0
-__all__ = ['SCROLLBACK', 'DIR', 'NOTES_CMDS', 'QUIET', 'MARKER', 'PipelineError', 'resolve_script', 'uv_argv', 'Pipeline',
-           'project_version', 'changelog_state', 'claim_unreleased', 'write_changelog', 'notes_step', 'quiet',
-           'Release']
+__all__ = ['SCROLLBACK', 'DIR', 'NOTES_CMDS', 'QUIET', 'CLEAN_CMD', 'MARKER', 'PipelineError', 'resolve_script', 'uv_argv',
+           'Pipeline', 'project_version', 'changelog_state', 'claim_unreleased', 'write_changelog', 'notes_step',
+           'quiet', 'tree_clean', 'release_cmd', 'Release']
 
 # %% ../nbs/02_pipeline.ipynb #18ee2a74
 SCROLLBACK = 200_000
@@ -242,6 +242,7 @@ class Pipeline:
 # %% ../nbs/02_pipeline.ipynb #7a1bd528
 NOTES_CMDS = ('nbdev-release-gh', 'nbdev_release_gh')
 QUIET = '--no-changelog --no-editor --yes'
+CLEAN_CMD = 'nbdev-release-git'
 MARKER = '<!-- do not remove -->\n'
 
 def project_version(root):
@@ -299,6 +300,16 @@ def quiet(cmd):
     "The nbdev release command with the flags that stop it asking for an editor or a yes."
     return f'{cmd.strip()} {QUIET}'
 
+def tree_clean(root):
+    "Whether git has no tracked change for `nbdev-release-gh` to commit; a folder git cannot read counts as not clean."
+    try: r = subprocess.run(['git', 'status', '--porcelain', '--untracked-files=no'], cwd=str(root), capture_output=True, text=True, stdin=subprocess.DEVNULL)
+    except OSError: return False
+    return r.returncode == 0 and not r.stdout.strip()
+
+def release_cmd(root, cmd):
+    "`nbdev-release-git` when there is nothing to commit, as `nbdev-release-gh` would stop there; else the quiet `cmd`."
+    return CLEAN_CMD if tree_clean(root) else quiet(cmd)
+
 
 # %% ../nbs/02_pipeline.ipynb #e22f9231
 class Release(Pipeline):
@@ -317,7 +328,7 @@ class Release(Pipeline):
             'fastship': flow == 'fastship', 'app': app_project(self.root),
             'notes': first((r['notes'] for r in st['steps'] if r['status'] == 'needs_notes'))}
     async def _run(self, step):
-        "Run `step`; the bare nbdev release command runs quiet once the changelog has its entry, and otherwise waits for notes."
+        "Run `step`; the bare nbdev release command runs quiet once the changelog has its entry (as `nbdev-release-git` when the tree is clean), and otherwise waits for notes."
         if not notes_step(step): return await super()._run(step)
         st = changelog_state(self.root)
         if not st['has']:
@@ -326,5 +337,5 @@ class Release(Pipeline):
             self._broadcast(f"\r\n\x1b[33m{step.label} waits for release notes for {st['version'] or 'this version'}\x1b[0m\r\n".encode())
             return
         if st['kind'] == 'unreleased': claim_unreleased(self.root, st['version'])
-        await super()._run(replace(step, cmd=quiet(step.cmd)))
+        await super()._run(replace(step, cmd=release_cmd(self.root, step.cmd)))
 

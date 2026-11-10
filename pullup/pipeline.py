@@ -2,16 +2,19 @@
 
 # %% ../nbs/02_pipeline.ipynb #d7426f18
 from __future__ import annotations
-import asyncio, json, os, shlex, time
+import asyncio, json, os, re, shlex, time
+from dataclasses import replace
 from shutil import which
 from fastcore.all import L, Path, first
 from fastcore.ansi import strip_ansi
 
 from .env import EnvStore, venv_env
-from .project import Step, default_steps, release_flow, app_project
+from .project import Step, default_steps, release_flow, app_project, _toml
 
 # %% auto #0
-__all__ = ['SCROLLBACK', 'DIR', 'PipelineError', 'resolve_script', 'uv_argv', 'Pipeline', 'Release']
+__all__ = ['SCROLLBACK', 'DIR', 'NOTES_CMDS', 'QUIET', 'MARKER', 'PipelineError', 'resolve_script', 'uv_argv', 'Pipeline',
+           'project_version', 'changelog_state', 'claim_unreleased', 'write_changelog', 'notes_step', 'quiet',
+           'Release']
 
 # %% ../nbs/02_pipeline.ipynb #18ee2a74
 SCROLLBACK = 200_000
@@ -108,6 +111,7 @@ class Pipeline:
         try: env.update({k: str(v) for k, v in self.env.values(self.needs()).items()})
         except Exception: pass
         env.setdefault('PYTHONUNBUFFERED', '1')
+        if env.get('TERM') in (None, '', 'dumb'): env['TERM'] = 'xterm-256color'
         return env
     def _row(self, s):
         "One step as a caller sees it: the plan, plus how the last run of it went."
@@ -235,6 +239,67 @@ class Pipeline:
             return {}
         return attribute(self.tail(400), checkouts=checkouts, family=family)
 
+# %% ../nbs/02_pipeline.ipynb #7a1bd528
+NOTES_CMDS = ('nbdev-release-gh', 'nbdev_release_gh')
+QUIET = '--no-changelog --no-editor --yes'
+MARKER = '<!-- do not remove -->\n'
+
+def project_version(root):
+    "The version the next release carries, from `settings.ini` or else `pyproject.toml`; `''` when neither names one."
+    try: text = (Path(root)/'settings.ini').read_text(encoding='utf-8', errors='replace')
+    except OSError: text = ''
+    if m := re.search(r'^version\s*=\s*(\S+)', text, re.M): return m[1]
+    return str((_toml(root).get('project') or {}).get('version') or '')
+
+def _sections(txt):
+    "The `## ` sections of a changelog in order, as `(heading, body)`."
+    return [(h.strip(), body) for h, _, body in (p.partition('\n') for p in re.split(r'^## ', txt, flags=re.M)[1:])]
+
+def _is_ver(heading, ver): return bool(ver) and re.fullmatch(rf'v?{re.escape(ver)}(?![\w.])(?:[\s(\[-].*)?', heading) is not None
+
+def changelog_state(root, version=None):
+    "Whether the first section of `CHANGELOG.md`, the one nbdev publishes, is a filled entry for `version` (default: the project's)."
+    root = Path(root); version = version or project_version(root)
+    out = dict(version=version, path=str(root/'CHANGELOG.md'), has=False, kind='', heading=f'## {version}')
+    try: secs = _sections((root/'CHANGELOG.md').read_text(encoding='utf-8'))
+    except OSError: return out
+    if not secs or not secs[0][1].strip() or not version: return out
+    if _is_ver(secs[0][0], version): out |= dict(has=True, kind='version')
+    elif secs[0][0].lower() == 'unreleased': out |= dict(has=True, kind='unreleased')
+    return out
+
+def claim_unreleased(root, version):
+    "Rename the leading `## Unreleased` heading to `## version`; returns the path, or None when there is no such heading."
+    path = Path(root)/'CHANGELOG.md'
+    try: txt = path.read_text(encoding='utf-8')
+    except OSError: return None
+    new, n = re.subn(r'^## Unreleased[ \t]*$', f'## {version}', txt, count=1, flags=re.M | re.I)
+    if n: path.write_text(new, encoding='utf-8')
+    return path if n else None
+
+def write_changelog(root, version, text):
+    "Write `text` as the entry for `version`, where nbdev puts one; an entry already there is replaced. Returns the path."
+    text, path = str(text or '').strip(), Path(root)/'CHANGELOG.md'
+    if not version: raise PipelineError('there is no version to write release notes for')
+    if not text: raise PipelineError('the release notes are empty')
+    old = path.read_text(encoding='utf-8') if path.exists() else f'# Release notes\n\n{MARKER}'
+    old = re.sub(rf'^## v?{re.escape(version)}(?![\w.])[^\n]*(?:\n|\Z).*?(?=^## |\Z)', '', old, flags=re.M | re.S)
+    entry = f'## {version}\n\n{text}\n\n'
+    if MARKER in old: head, _, rest = old.partition(MARKER); head += MARKER + '\n'
+    elif m := re.search(r'^## ', old, re.M): head, rest = old[:m.start()].rstrip('\n') + '\n\n', old[m.start():]
+    else: head, rest = (old.rstrip('\n') + '\n\n' if old.strip() else ''), ''
+    path.write_text((head + entry + rest.lstrip('\n')).rstrip('\n') + '\n', encoding='utf-8')
+    return path
+
+def notes_step(step):
+    "Whether `step` is the bare nbdev release command, which stops to ask questions and open an editor."
+    return not step.argv and step.cmd.strip() in NOTES_CMDS
+
+def quiet(cmd):
+    "The nbdev release command with the flags that stop it asking for an editor or a yes."
+    return f'{cmd.strip()} {QUIET}'
+
+
 # %% ../nbs/02_pipeline.ipynb #e22f9231
 class Release(Pipeline):
     "The release pipeline, whose default plan is the project's release flow."
@@ -242,7 +307,24 @@ class Release(Pipeline):
     KIND = 'release'
     @staticmethod
     def defaults(root): return default_steps(root)
+    def _row(self, s):
+        row = super()._row(s)
+        return row | ({'notes': (self.results.get(s.id) or {}).get('notes')} if row['status'] == 'needs_notes' else {})
     def state(self):
         flow = release_flow(self.root)
-        return super().state() | {'flow': flow, 'nbdev': flow == 'nbdev',
-            'fastship': flow == 'fastship', 'app': app_project(self.root)}
+        st = super().state()
+        return st | {'flow': flow, 'nbdev': flow == 'nbdev',
+            'fastship': flow == 'fastship', 'app': app_project(self.root),
+            'notes': first((r['notes'] for r in st['steps'] if r['status'] == 'needs_notes'))}
+    async def _run(self, step):
+        "Run `step`; the bare nbdev release command runs quiet once the changelog has its entry, and otherwise waits for notes."
+        if not notes_step(step): return await super()._run(step)
+        st = changelog_state(self.root)
+        if not st['has']:
+            self._auto = False
+            self.results[step.id] = {'status': 'needs_notes', 'code': None, 'started': 0, 'finished': 0, 'notes': st}
+            self._broadcast(f"\r\n\x1b[33m{step.label} waits for release notes for {st['version'] or 'this version'}\x1b[0m\r\n".encode())
+            return
+        if st['kind'] == 'unreleased': claim_unreleased(self.root, st['version'])
+        await super()._run(replace(step, cmd=quiet(step.cmd)))
+

@@ -246,11 +246,19 @@ CLEAN_CMD = 'nbdev-release-git'
 MARKER = '<!-- do not remove -->\n'
 
 def project_version(root):
-    "The version the next release carries, from `settings.ini` or else `pyproject.toml`; `''` when neither names one."
-    try: text = (Path(root)/'settings.ini').read_text(encoding='utf-8', errors='replace')
+    "The version the next release carries: `settings.ini`, then `pyproject.toml`, then the `__version__` a dynamic version reads; `''` when none names one."
+    root = Path(root)
+    try: text = (root/'settings.ini').read_text(encoding='utf-8', errors='replace')
     except OSError: text = ''
     if m := re.search(r'^version\s*=\s*(\S+)', text, re.M): return m[1]
-    return str((_toml(root).get('project') or {}).get('version') or '')
+    toml = _toml(root); proj = toml.get('project') or {}
+    if v := proj.get('version'): return str(v)
+    if 'version' not in (proj.get('dynamic') or ()): return ''
+    #: nbdev v3 keeps it in the package's `__init__.py`; hatch names that file, else the package is the project's name.
+    src = (((toml.get('tool') or {}).get('hatch') or {}).get('version') or {}).get('path') or f"{str(proj.get('name') or '').replace('-', '_')}/__init__.py"
+    try: m = re.search(r'''^__version__\s*=\s*['"]([^'"]+)['"]''', (root/src).read_text(encoding='utf-8', errors='replace'), re.M)
+    except OSError: return ''
+    return m[1] if m else ''
 
 def _sections(txt):
     "The `## ` sections of a changelog in order, as `(heading, body)`."

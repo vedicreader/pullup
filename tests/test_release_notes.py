@@ -34,6 +34,17 @@ def test_the_version_comes_from_settings_ini_then_pyproject(tmp_path):
     assert project_version(tmp_path/'b') == '4.5.6'
     assert project_version(tmp_path/'nothing') == ''
 
+def test_a_dynamic_version_comes_from_the_package(tmp_path):
+    "nbdev v3 keeps the version in `__version__`; rishi read as '' and so waited for notes it could never save."
+    (tmp_path/'a'/'pkg').mkdir(parents=True); (tmp_path/'a'/'pkg'/'__init__.py').write_text('__version__ = "0.1.70"\n')
+    (tmp_path/'a'/'pyproject.toml').write_text('[project]\nname = "x"\ndynamic = ["version"]\n[tool.hatch.version]\npath = "pkg/__init__.py"\n')
+    assert project_version(tmp_path/'a') == '0.1.70'
+    (tmp_path/'b'/'my_lib').mkdir(parents=True); (tmp_path/'b'/'my_lib'/'__init__.py').write_text("__version__ = '2.0.1'\n")
+    (tmp_path/'b'/'pyproject.toml').write_text('[project]\nname = "my-lib"\ndynamic = ["version"]\n')
+    assert project_version(tmp_path/'b') == '2.0.1'
+    root = tmp_path/'a'; (root/'CHANGELOG.md').write_text(f'# Release notes\n\n{MARK}\n## 0.1.70\n\n- slimmer\n')
+    assert changelog_state(root)['has']
+
 def test_an_entry_for_the_version_is_found(tmp_path):
     root = nbdev_root(tmp_path, changelog=f'# Release notes\n\n{MARK}\n## 0.2.0\n\n- new\n\n## 0.1.0\n\n- old\n')
     st = changelog_state(root)

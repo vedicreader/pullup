@@ -2,6 +2,10 @@
 
 <!-- do not remove -->
 
+## 0.0.15
+
+- fix dynamic package version loading bug
+
 ## 0.0.14
 
 - The nbdev release step runs `nbdev-release-git` when the changelog entry is already committed and git has no tracked change to commit. `nbdev-release-gh` fails there with `nothing to commit`. When a change is waiting, for example a renamed `## Unreleased` heading, the step still runs `nbdev-release-gh --no-changelog --no-editor --yes`. The commit must already be on the remote. A `release.json` step is left as written
